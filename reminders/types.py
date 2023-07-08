@@ -561,7 +561,7 @@ class Reminder:
                 )
         else:
             if self.content["type"] in ["text", "message"]:
-                embeds = [self.to_embed(utc_now=utc_now)]
+                embeds = [self.to_embed(utc_now=utc_now, embed_color=self.cog.bot._color)]
             else:
                 embeds = []
             if self.content.get("embed") is not None:
@@ -605,7 +605,11 @@ class Reminder:
                         ) is not None:
                             reference = message
                     snooze_view_enabled = await self.cog.config.snooze_view()
-                    view = SnoozeView(cog=self.cog, reminder=self) if snooze_view_enabled else None
+                    if snooze_view_enabled:
+                        view = SnoozeView(cog=self.cog, reminder=self)
+                    else:
+                        view = discord.ui.View()
+                        view.add_item(discord.ui.Button(style=discord.ButtonStyle.url, url=self.jump_url))
                     message = await destination.send(
                         embeds=embeds,
                         files=files,

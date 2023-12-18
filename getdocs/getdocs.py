@@ -200,8 +200,8 @@ BASE_URLS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
         "icon_url": "https://repository-images.githubusercontent.com/9113587/aa03b380-afdb-11eb-8e88-2c7542e1670f",
     },
     "warcraftapi": {  # Special source.
-        "url": "https://wowpedia.fandom.com/wiki/World_of_Warcraft_API",
-        "icon_url": "https://static.wikia.nocookie.net/wowpedia/images/e/e6/Site-logo.png",
+        "url": "https://warcraft.wiki.gg/wiki/World_of_Warcraft_API",
+        "icon_url": "https://warcraft.wiki.gg/images/e/e6/Site-logo.png",
         "aliases": ["warcraft"],
     },
 }

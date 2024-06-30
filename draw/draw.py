@@ -39,9 +39,10 @@ _ = Translator("Draw", __file__)
 class Draw(Cog):
     """A cog to make pixel arts on Discord!"""
 
+    __authors__: typing.List[str] = ["WitherredAway", "AAA3A"]
+
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["WitherredAway", "AAA3A"]
 
         self._session: aiohttp.ClientSession = None
         self.cache: typing.Dict[
@@ -52,14 +53,6 @@ class Draw(Cog):
         await super().cog_load()
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
         asyncio.create_task(self.generate_cache())
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def generate_cache(self) -> None:
         for pixel in DEFAULT_CACHE:
@@ -93,18 +86,16 @@ class Draw(Cog):
             key = getattr(pixel, "id", pixel)
             url = f"https://cdn.discordapp.com/emojis/{key}.png"
         elif isinstance(pixel, str):
-            if pixel.startswith("http"):  # url
+            if pixel.startswith("http"):  # URL
                 key = pixel
                 url = pixel
-            else:  # unicode
-                key = pixel
-                url = f"https://emojicdn.elk.sh/{quote_plus(key)}?style=twitter"
-                # chars = [hex(ord(char))[2:] for char in key]
-                # if len(chars) == 2 and "fe0f" in chars:
-                #     chars.remove("fe0f")
-                # if "20e3" in chars:
-                #     chars.remove("fe0f")
-                # url = f"https://twemoji.maxcdn.com/2/svg/{'-'.join(chars)}.svg"
+            else:  # Unicode
+                try:
+                    key = hex(ord(pixel))[2:]
+                    url = f"https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/{key}.png"
+                except TypeError:
+                    key = pixel
+                    url = f"https://emojicdn.elk.sh/{quote_plus(key)}?style=twitter"
         elif isinstance(pixel, Color):
             key = pixel.RGBA
             if key not in self.cache:
@@ -121,7 +112,7 @@ class Draw(Cog):
                 try:
                     image = Image.open(io.BytesIO(image_bytes))
                 except (AttributeError, UnidentifiedImageError) as e:
-                    self.log.error(
+                    self.logger.error(
                         f"Error when retrieving the pixel {key} ({url}) image for the cache.",
                         exc_info=e,
                     )

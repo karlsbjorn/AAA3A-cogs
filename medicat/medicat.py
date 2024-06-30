@@ -141,7 +141,7 @@ CUSTOM_COMMANDS = {
     "whenupdate": {
         "title": _("How often will Medicat be updated?"),
         "description": _(
-            "Medicat is currently on hiatus.\nDue to personal reasons, neither Jayro, Matt or AAA3A have the time to develop Medicat full time.\nWe do encourage you to update the tools as you see fit on your end." # MediCat USB is now a rolling release, so will be regularly updated with major releases, and minor updates as needed (Typically monthly or bi-monthly). The links here will always be the latest version. The PortableApps are easily updatable by the user, once they have been 'burned' to USB
+            "Medicat is currently on hiatus.\nDue to personal reasons, neither Jayro, Matt or AAA3A have the time to develop Medicat full time.\nWe do encourage you to update the tools as you see fit on your end."  # MediCat USB is now a rolling release, so will be regularly updated with major releases, and minor updates as needed (Typically monthly or bi-monthly). The links here will always be the latest version. The PortableApps are easily updatable by the user, once they have been 'burned' to USB
         ),
     },
     "wimvhd": {
@@ -183,7 +183,7 @@ BOOTABLES_TOOLS = {
     "EaseUS Todo Backup": {
         "url": "https://www.fcportables.com/easeus-todo-backup-winpe/",
         "category": "USB\\Backup_and_Recovery\\",
-        "regex": r"EaseUS Todo Backup (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) Build (\d*) WinPE \(x64\)",
+        "regex": r"EaseUS Todo Backup v.(\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) winPE \(x64\)",
     },
     "Macrium Reflect": {
         "url": "https://www.fcportables.com/macrium-reflect-rescue-winpe/",
@@ -198,7 +198,7 @@ BOOTABLES_TOOLS = {
     "MiniTool Power Data Recovery": {
         "url": "https://www.fcportables.com/minitool-data-recovery-winpe/",
         "category": "USB\\Backup_and_Recovery\\",
-        "regex": r"Portable MiniTool Power Data Recovery (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) Business Technician \+ WinPE",
+        "regex": r"Portable MiniTool Power Data Recovery (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) \(x64\) \+ WinPE",
     },
     "Boot Repair Disk": {
         "url": "https://www.fcportables.com/boot-repair-disk/",
@@ -208,7 +208,7 @@ BOOTABLES_TOOLS = {
     "EasyUEFI Technician": {
         "url": "https://www.fcportables.com/easyuefi-portable-winpe/",
         "category": "USB\\Boot_Repair\\",
-        "regex": r"Portable EasyUEFI Enterprise (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) \+ WinPE",
+        "regex": r"Portable EasyUEFI Technicians (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) \(x64\) \+ WinPE",
     },
     "SystemRescue": {
         "url": "https://www.fcportables.com/systemrescuecd/",
@@ -228,7 +228,7 @@ BOOTABLES_TOOLS = {
     "Memtest86 Pro": {
         "url": "https://www.fcportables.com/memtest86-pro/",
         "category": "USB\\Boot_Repair\\",
-        "regex": r"Memtest86 Pro v(\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) ISO-USB Multilingual \(Fixed\)",
+        "regex": r"Memtest86 Pro v(\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) ISO-USB Multilingual",
     },
     "Active@ Boot Disk": {
         "url": "https://www.fcportables.com/active-boot-disk/",
@@ -248,7 +248,7 @@ BOOTABLES_TOOLS = {
     "EaseUS Partition Master": {
         "url": "https://www.fcportables.com/easeus-partition-master-winpe/",
         "category": "USB\\Partition_Tools\\",
-        "regex": r"EaseUS Partition Master (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) Build (\d*) \(x64\) WinPE",
+        "regex": r"EaseUS Partition Master (\d*(\.|-)\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*(\.|-)\d*|\d*(\.|-)\d*|\d*) \(x64\) WinPE",
     },
     "MiniTool Partition Wizard Technician": {
         "url": "https://www.fcportables.com/minitool-partition-wizard-portable/",
@@ -298,12 +298,12 @@ class Medicat(Cog):
                 "Acronis True Image": "2021.6",
                 "AOMEI Backupper Technician Plus": "7.2.3",
                 "EaseUS Data Recovery Wizard": "15.2",
-                "EaseUS Todo Backup": "2023",
+                "EaseUS Todo Backup": "16.2",
                 "Macrium Reflect": "8.1.7544",
                 "MiniTool ShadowMaker Business Deluxe": "4.1.0",
-                "MiniTool Power Data Recovery": "11.5",
+                "MiniTool Power Data Recovery": "11.9",
                 "Boot Repair Disk": "2021-12-16",
-                "EasyUEFI Technician": "5.0",
+                "EasyUEFI Technician": "5.5.0",
                 "SystemRescue": "10.01",
                 "Ultimate Boot": "5.3.8",
                 "HDAT2": "7.5",
@@ -311,21 +311,46 @@ class Medicat(Cog):
                 "Active@ Boot Disk": "22.0",
                 "Acronis Disk Director": "12.5.163",
                 "AOMEI Partition Assistant Technician Edition": "10.0.0",
-                "EaseUS Partition Master": "17.8.0",
+                "EaseUS Partition Master": "18.5.0",
                 "MiniTool Partition Wizard Technician": "12.7",
                 "NIUBI Partition Editor Technician Edition": "9.6.0",
                 "Paragon Hard Disk Manager Advanced": "17.20.11",
                 "Parted Magic": "2023.05.21",
             },
         }
-        self.config.register_global(**self.medicat_global)
+        self.config.register_global(
+            CONFIG_SCHEMA=None,
+            last_ventoy_version="1.0.74",
+            last_bootables_tools_versions={
+                "Acronis Cyber Backup": "12.5",
+                "Acronis True Image": "2021.6",
+                "AOMEI Backupper Technician Plus": "7.3.5",
+                "EaseUS Data Recovery Wizard": "15.2",
+                "EaseUS Todo Backup": "2023",
+                "Macrium Reflect": "8.1.7909",
+                "MiniTool ShadowMaker Business Deluxe": "4.4.0",
+                "MiniTool Power Data Recovery": "11.5",
+                "Boot Repair Disk": "2021-12-16",
+                "EasyUEFI Technician": "5.0",
+                "SystemRescue": "11.01",
+                "Ultimate Boot": "5.3.8",
+                "HDAT2": "7.5",
+                "Memtest86 Pro": "10.7.1000",
+                "Active@ Boot Disk": "24.0",
+                "Acronis Disk Director": "12.5.163",
+                "AOMEI Partition Assistant Technician Edition": "10.4.0",
+                "EaseUS Partition Master": "17.8.0",
+                "MiniTool Partition Wizard Technician": "12.8",
+                "NIUBI Partition Editor Technician Edition": "9.9.5",
+                "Paragon Hard Disk Manager Advanced": "17.20.17",
+                "Parted Magic": "2024.05.02",
+            },
+        )
 
         self._session: aiohttp.ClientSession = None
 
     async def cog_load(self) -> None:
         await super().cog_load()
-        global MEDICAT_ICON_URL
-        MEDICAT_ICON_URL = (await self.bot.fetch_invite("medicat")).guild.icon.url
         await self.edit_config_schema()
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
         self.loops.append(
@@ -346,14 +371,12 @@ class Medicat(Cog):
         )
         self.CC_added: asyncio.Event = asyncio.Event()
         await self.add_custom_commands()
+        asyncio.create_task(self.cog_after_load())
 
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
+    async def cog_after_load(self) -> None:
+        await self.bot.wait_until_red_ready()
+        global MEDICAT_ICON_URL
+        MEDICAT_ICON_URL = (await self.bot.fetch_invite("medicat")).guild.icon.url
 
     async def edit_config_schema(self) -> None:
         CONFIG_SCHEMA = await self.config.CONFIG_SCHEMA()
@@ -374,7 +397,7 @@ class Medicat(Cog):
         if CONFIG_SCHEMA < self.CONFIG_SCHEMA:
             CONFIG_SCHEMA = self.CONFIG_SCHEMA
             await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
-        self.log.info(
+        self.logger.info(
             f"The Config schema has been successfully modified to {self.CONFIG_SCHEMA} for the {self.qualified_name} cog."
         )
 
@@ -383,7 +406,7 @@ class Medicat(Cog):
         try:
             self.remove_custom_commands()
         except Exception as e:
-            self.log.error("An error occurred while removing the custom_commands.", exc_info=e)
+            self.logger.error("An error occurred while removing the custom_commands.", exc_info=e)
         if self._session is not None:
             await self._session.close()
         await super().cog_unload()
@@ -469,10 +492,10 @@ class Medicat(Cog):
             ventoy_tag_body = ventoy_tag_body.split("\n")
             result = []
             for x in ventoy_tag_body:
-                if x in [
+                if x in (
                     "See [https://www.ventoy.net/en/doc_news.html](https://www.ventoy.net/en/doc_news.html) for more details.\r",
                     "**Wana boot and install OS through network (PXE)? Welcome to my new project iVentoy.**\r",
-                ]:
+                ):
                     break
                 if x != "\r":
                     result.append(x)
@@ -636,7 +659,7 @@ class Medicat(Cog):
                 return True
             if ctx.guild is None:
                 return False
-            return ctx.guild.id in [MEDICAT_GUILD, TEST_GUILD]
+            return ctx.guild.id in (MEDICAT_GUILD, TEST_GUILD)
 
         return commands.check(pred)
 
@@ -699,7 +722,7 @@ class Medicat(Cog):
                     del command.params["ctx"]
                 setattr(self, f"CC_{name}", command)
             except Exception as e:
-                self.log.error(
+                self.logger.error(
                     f"An error occurred while adding the `medicat {name}` custom command.",
                     exc_info=e,
                 )
@@ -894,6 +917,67 @@ class Medicat(Cog):
             for y, z in result[x].items():
                 message += f"\n{y}: {z}"
         await Menu(pages=message, lang="py").start(ctx)
+
+    @is_owner_or_AAA3A()
+    @commands.bot_has_permissions(embed_links=True)
+    @medicat.command(aliases=["bootablestoolsdownloadlinks"])
+    async def getbootablestoolsdownloadlinks(self, ctx: commands.Context) -> None:
+        """Get the download link of each Medicat USB bootable tool."""
+        result = {}
+        for tool in BOOTABLES_TOOLS:
+            try:
+                async with self._session.get(BOOTABLES_TOOLS[tool]["url"], timeout=3) as r:
+                    content = await r.text()
+                # for x in r.split("\n"):
+                #     if '"headline":' in x and '<html lang="en-US">' not in x:
+                #         break
+                # x = x.replace('    "headline": "', "").replace('",', "")
+                soup = BeautifulSoup(content, "lxml")
+                result[tool] = [
+                    element["href"].strip()
+                    for element in soup.find_all(
+                        "a",
+                        href=lambda href: href is not None
+                        and href.strip().startswith("https://uploadrar.com/"),
+                    )
+                ]
+            except asyncio.TimeoutError:
+                result[tool] = None
+        embed: discord.Embed = discord.Embed()
+        embed.set_thumbnail(
+            url="https://www.fcportables.com/wp-content/uploads/fcportables-logo.jpg"
+        )
+        embed.set_footer(
+            text="From FCportables.",
+            icon_url="https://www.fcportables.com/wp-content/uploads/fcportables-logo.jpg",
+        )
+        embed.title = "Last bootables tools download links"
+        embed.url = "https://www.fcportables.com/"
+        embed.description = "\n".join(
+            [
+                f"{bold(name)} ➜ {' OR '.join(value) if value else '⚠️ ' + BOOTABLES_TOOLS[name]['url']}"
+                for name, value in result.items()
+            ]
+        )
+        view = discord.ui.View()
+        view.add_item(
+            discord.ui.Button(
+                style=discord.ButtonStyle.url,
+                label=_("View FCportables Official Website"),
+                url="https://www.fcportables.com/",
+            )
+        )
+        try:
+            hook: discord.Webhook = await CogsUtils.get_hook(bot=self.bot, channel=ctx.channel)
+            await hook.send(
+                embed=embed,
+                username="Bootables Tools Updates",
+                avatar_url="https://www.fcportables.com/wp-content/uploads/fcportables-logo.jpg",
+                view=view,
+                wait=True,
+            )
+        except discord.HTTPException:
+            await ctx.send(embed=embed, view=view)
 
     @is_owner_or_AAA3A()
     @commands.bot_has_permissions(embed_links=True)

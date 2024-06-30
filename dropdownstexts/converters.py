@@ -6,9 +6,9 @@ import typing  # isort:skip
 import re
 
 try:
-    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
-except ImportError:
     from emoji import EMOJI_DATA  # emoji>=2.0.0
+except ImportError:
+    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
 
 _ = Translator("RolesButtons", __file__)
 
@@ -21,18 +21,6 @@ class Emoji(commands.EmojiConverter):
         if argument in EMOJI_DATA:
             return argument
         if argument in {
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "#",
-            "*",
             "🇦",
             "🇧",
             "🇨",
@@ -70,17 +58,17 @@ class EmojiLabelTextConverter(commands.Converter):
     ) -> typing.Tuple[discord.Role, typing.Union[discord.PartialEmoji, str]]:
         arg_split = re.split(r";|\||-", argument)
         try:
-            emoji, label, text = arg_split
+            emoji, label, text_or_message = arg_split
         except Exception:
             # emoji = None
             # try:
-            #     label, text = arg_split
+            #     label, text_or_message = arg_split
             # except Exception:
             raise commands.BadArgument(
                 _(
-                    "Dropdown Text must be an emoji, followed by a label and a text, separated by either `;`, `,`, `|`, or `-`."
+                    "Dropdown Text must be an `emoji`, followed by a `label` and a `text_or_message`, separated by either `;`, `,`, `|`, or `-`."
                 )
             )
         # if emoji is not None:
         emoji = await Emoji().convert(ctx, emoji.strip())
-        return emoji, label, text
+        return emoji, label, text_or_message

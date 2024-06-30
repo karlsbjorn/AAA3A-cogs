@@ -6,6 +6,8 @@ import typing  # isort:skip
 
 import aiohttp
 
+from .dashboard_integration import DashboardIntegration
+
 # import socket
 
 # Credits:
@@ -17,7 +19,7 @@ _ = Translator("Ip", __file__)
 
 
 @cog_i18n(_)
-class Ip(Cog):
+class Ip(DashboardIntegration, Cog):
     """A cog to get the ip address  of the bot's host machine!"""
 
     def __init__(self, bot: Red) -> None:
@@ -28,10 +30,7 @@ class Ip(Cog):
             identifier=205192943327321000143939875896557571750,  # 969369062738
             force_registration=True,
         )
-        self.ip_global: typing.Dict[str, str] = {
-            "port": "0000",  # Port.
-        }
-        self.config.register_global(**self.ip_global)
+        self.config.register_global(port="0000")
 
         _settings: typing.Dict[
             str, typing.Dict[str, typing.Union[typing.List[str], bool, str]]
@@ -56,14 +55,6 @@ class Ip(Cog):
     async def cog_load(self) -> None:
         await super().cog_load()
         await self.settings.add_commands()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     @commands.is_owner()
     @commands.hybrid_group(name="ip")

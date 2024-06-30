@@ -88,7 +88,7 @@ class Ticket:
     def instance(
         ctx: commands.Context,
         profile: str,
-        reason: typing.Optional[str] = _("No reason provided."),
+        reason: str = "No reason provided.",
     ) -> typing.Any:
         ticket: Ticket = Ticket(
             bot=ctx.bot,
@@ -203,10 +203,10 @@ class Ticket:
         if self.first_message is not None:
             self.first_message = int(self.first_message.id)
         json = self.__dict__
-        for key in ["bot", "cog"]:
+        for key in ("bot", "cog"):
             del json[key]
         if clean:
-            for key in [
+            for key in (
                 "claim",
                 "opened_by",
                 "closed_by",
@@ -220,12 +220,12 @@ class Ticket:
                 "renamed_at",
                 "locked_at",
                 "unlocked_at",
-            ]:
+            ):
                 if json[key] is None:
                     del json[key]
             if json["members"] == []:
                 del json["members"]
-            for key in ["logs_messages", "save_data"]:
+            for key in ("logs_messages", "save_data"):
                 if json[key]:
                     del json[key]
         data = await cog.config.guild(guild).tickets.all()
@@ -293,7 +293,9 @@ class Ticket:
                 },
             ],
         )
-        optionnal_ping = f" ||{' '.join(role.mention for role in ping_roles)}||"[:1500] if ping_roles else ""
+        optionnal_ping = (
+            f" ||{' '.join(role.mention for role in ping_roles)}||"[:1500] if ping_roles else ""
+        )
         embed = await self.cog.get_embed_important(
             self,
             False,
@@ -378,7 +380,7 @@ class Ticket:
                     for role in config["support_roles"]:
                         members.extend(role.members)
                 if config["view_roles"]:
-                     for role in config["view_roles"]:
+                    for role in config["view_roles"]:
                         members.extend(role.members)
                 adding_error = False
                 for member in members:
@@ -485,8 +487,16 @@ class Ticket:
         new_name = new_name.replace(f"{emoji_close}-", "", 1)
         new_name = f"{emoji_open}-{new_name}"
         if isinstance(self.channel, discord.TextChannel):
+            members = [self.owner] + self.members
+            overwrites = self.channel.overwrites
+            for member in members:
+                if member in overwrites:
+                    overwrites[member].send_messages = True
             await self.channel.edit(
-                name=new_name, category=config["category_open"], reason=_reason
+                name=new_name,
+                category=config["category_open"],
+                overwrites=overwrites,
+                reason=_reason,
             )
         else:
             await self.channel.edit(name=new_name, archived=False, reason=_reason)
@@ -541,7 +551,11 @@ class Ticket:
                 await self.first_message.edit(view=view)
             except discord.HTTPException:
                 pass
-        if config["ticket_role"] is not None and self.owner is not None and isinstance(self.owner, discord.Member):
+        if (
+            config["ticket_role"] is not None
+            and self.owner is not None
+            and isinstance(self.owner, discord.Member)
+        ):
             try:
                 await self.owner.add_roles(config["ticket_role"], reason=_reason)
             except discord.HTTPException:
@@ -618,12 +632,35 @@ class Ticket:
             except discord.HTTPException:
                 pass
         if isinstance(self.channel, discord.TextChannel):
+            allowed_members = []
+            if self.claim is not None:
+                allowed_members.append(self.claim)
+            if config["admin_roles"]:
+                for role in config["admin_roles"]:
+                    allowed_members.extend(role.members)
+            if config["support_roles"]:
+                for role in config["support_roles"]:
+                    allowed_members.extend(role.members)
+            members = filter(
+                lambda member: member not in allowed_members, [self.owner] + self.members
+            )
+            overwrites = self.channel.overwrites
+            for member in members:
+                if member in overwrites:
+                    overwrites[member].send_messages = False
             await self.channel.edit(
-                name=new_name, category=config["category_close"], reason=_reason
+                name=new_name,
+                category=config["category_close"],
+                overwrites=overwrites,
+                reason=_reason,
             )
         else:
             await self.channel.edit(name=new_name, archived=True, locked=True, reason=_reason)
-        if config["ticket_role"] is not None and self.owner is not None and isinstance(self.owner, discord.Member):
+        if (
+            config["ticket_role"] is not None
+            and self.owner is not None
+            and isinstance(self.owner, discord.Member)
+        ):
             try:
                 await self.owner.remove_roles(config["ticket_role"], reason=_reason)
             except discord.HTTPException:
@@ -827,20 +864,22 @@ class Ticket:
             )
             overwrites = self.channel.overwrites
             overwrites[member] = discord.PermissionOverwrite(
-                attach_files=True,
-                read_message_history=True,
-                read_messages=True,
-                send_messages=True,
                 view_channel=True,
+                read_messages=True,
+                read_message_history=True,
+                send_messages=True,
+                attach_files=True,
+                use_application_commands=True,
             )
             if config["support_roles"]:
                 for role in config["support_roles"]:
                     overwrites[role] = discord.PermissionOverwrite(
-                        attach_files=False,
-                        read_message_history=True,
+                        view_channel=True,
                         read_messages=True,
                         send_messages=False,
-                        view_channel=True,
+                        read_message_history=True,
+                        attach_files=False,
+                        use_application_commands=False,
                     )
             await self.channel.edit(overwrites=overwrites, reason=_reason)  # topic=topic,
         if self.first_message is not None:
@@ -912,11 +951,12 @@ class Ticket:
                 overwrites = self.channel.overwrites
                 for role in config["support_roles"]:
                     overwrites[role] = discord.PermissionOverwrite(
-                        attach_files=True,
-                        read_message_history=True,
-                        read_messages=True,
-                        send_messages=True,
                         view_channel=True,
+                        read_messages=True,
+                        read_message_history=True,
+                        send_messages=True,
+                        attach_files=True,
+                        use_application_commands=True,
                     )
                 await self.channel.edit(overwrites=overwrites, reason=_reason)
             await self.channel.set_permissions(member, overwrite=None, reason=_reason)
@@ -993,11 +1033,12 @@ class Ticket:
         self.remove_member(self.owner, author=None)
         overwrites = self.channel.overwrites
         overwrites[member] = discord.PermissionOverwrite(
-            attach_files=True,
-            read_message_history=True,
-            read_messages=True,
-            send_messages=True,
             view_channel=True,
+            read_messages=True,
+            read_message_history=True,
+            send_messages=True,
+            attach_files=True,
+            use_application_commands=True,
         )
         await self.channel.edit(overwrites=overwrites, reason=_reason)
         if config["ticket_role"] is not None:
@@ -1056,11 +1097,12 @@ class Ticket:
                 if member not in self.members:
                     self.members.append(member)
                 overwrites[member] = discord.PermissionOverwrite(
-                    attach_files=True,
-                    read_message_history=True,
-                    read_messages=True,
-                    send_messages=True,
                     view_channel=True,
+                    read_messages=True,
+                    read_message_history=True,
+                    send_messages=True,
+                    attach_files=True,
+                    use_application_commands=True,
                 )
             await self.channel.edit(overwrites=overwrites, reason=_reason)
         else:

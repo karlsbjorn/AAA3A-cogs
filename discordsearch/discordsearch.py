@@ -1,7 +1,7 @@
 from AAA3A_utils import Cog, Menu  # isort:skip
 from redbot.core import commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -37,14 +37,6 @@ class DiscordSearch(Cog):
         super().__init__(bot=bot)
 
         self.re_pool: multiprocessing.Pool = multiprocessing.Pool()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     @commands.guild_only()
     @commands.admin_or_permissions(administrator=True)
@@ -91,7 +83,7 @@ class DiscordSearch(Cog):
             channel = ctx.channel
         if all(
             setting is None
-            for setting in [
+            for setting in (
                 authors,
                 mentions,
                 before,
@@ -101,7 +93,7 @@ class DiscordSearch(Cog):
                 regex,
                 contains,
                 limit,
-            ]
+            )
         ):
             raise commands.UserFeedbackCheckFailure(_("You must provide at least one parameter."))
         args_str = [

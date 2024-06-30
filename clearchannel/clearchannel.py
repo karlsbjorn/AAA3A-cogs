@@ -16,7 +16,7 @@ _ = Translator("ClearChannel", __file__)
 
 
 @cog_i18n(_)
-class ClearChannel(Cog, DashboardIntegration):
+class ClearChannel(DashboardIntegration, Cog):
     """A cog to delete ALL messages of a channel!
 
     ⚠ The channel will be cloned, and then **deleted**.
@@ -30,13 +30,12 @@ class ClearChannel(Cog, DashboardIntegration):
             identifier=205192943327321000143939875896557571750,  # 837018163805
             force_registration=True,
         )
-        self.clearchannel_guild = {
-            "channel_delete": True,
-            "first_message": True,
-            "author_dm": False,
-            "custom_message": {},
-        }
-        self.config.register_guild(**self.clearchannel_guild)
+        self.config.register_guild(
+            channel_delete=True,
+            first_message=True,
+            author_dm=False,
+            custom_message={},
+        )
 
         _settings: typing.Dict[
             str, typing.Dict[str, typing.Union[typing.List[str], bool, str]]
@@ -55,7 +54,11 @@ class ClearChannel(Cog, DashboardIntegration):
             },
             "custom_message": {
                 "converter": CustomMessageConverter,
-                "description": "Specify a custom message to be sent from the link of another message or a json (https://discohook.org/ for example).\n\nUse `{name}` or `{icon_url}` for the user.",
+                "description": "Specify a custom message to be sent from the link of another message or a json (https://discohook.org/ for example).\n\nUse the variables `{user_name}`, `{user_avatar_url}`, `{user_mention}`, `{user_id}`, `{channel_name}`, `{channel_mention}` and `{channel_id}`.",
+            },
+            "prompt_message": {
+                "converter": CustomMessageConverter,
+                "description": "Specify a custom message to be sent to confirm the clearing of the channel.\n\nUse the variables `{user_name}`, `{user_avatar_url}`, `{channel_name}`, `{channel_mention}` and `{channel_id}`.",
             },
         }
         self.settings: Settings = Settings(
@@ -74,14 +77,6 @@ class ClearChannel(Cog, DashboardIntegration):
         await super().cog_load()
         await self.settings.add_commands()
 
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     @commands.guild_only()
     @commands.guildowner()
     @commands.bot_has_permissions(manage_channels=True)
@@ -97,17 +92,40 @@ class ClearChannel(Cog, DashboardIntegration):
         channel_position = old_channel.position
 
         if not confirmation and not ctx.assume_yes:
-            embed: discord.Embed = discord.Embed()
-            embed.title = _("⚠️ - ClearChannel")
-            embed.description = _(
-                "Do you really want to delete ALL messages from channel {old_channel.mention} ({old_channel.id})?\n⚠ The channel will be cloned, and then **deleted**."
-            ).format(old_channel=old_channel)
-            embed.color = 0xF00020
-            if not await CogsUtils.ConfirmationAsk(
-                ctx, content=f"{ctx.author.mention}", embed=embed
-            ):
-                await CogsUtils.delete_message(ctx.message)
-                return
+            if not config["prompt_message"]:
+                embed: discord.Embed = discord.Embed()
+                embed.title = _("⚠️ - ClearChannel")
+                embed.description = _(
+                    "Do you really want to delete ALL messages from channel {old_channel.mention} ({old_channel.id})?\n⚠ The channel will be cloned, and then **deleted**."
+                ).format(old_channel=old_channel)
+                embed.color = 0xF00020
+                if not await CogsUtils.ConfirmationAsk(
+                    ctx, content=f"{ctx.author.mention}", embed=embed
+                ):
+                    await CogsUtils.delete_message(ctx.message)
+                    return
+            else:
+                env = {
+                    "user_name": ctx.author.display_name,
+                    "user_avatar_url": ctx.author.display_avatar.url,
+                    "user_mention": ctx.author.mention,
+                    "user_id": ctx.author.id,
+                    "channel_name": old_channel.name,
+                    "channel_mention": old_channel.mention,
+                    "channel_id": old_channel.id,
+                }
+                _kwargs = {}
+                class FakeChannel:
+                    async def send(self, **kwargs):
+                        _kwargs.update(kwargs)
+                await CustomMessageConverter(**config["prompt_message"]).send_message(
+                    ctx, channel=FakeChannel(), env=env
+                )
+                if not await CogsUtils.ConfirmationAsk(
+                    ctx, **_kwargs
+                ):
+                    await CogsUtils.delete_message(ctx.message)
+                    return
 
         reason = _("Clear Channel requested by {ctx.author} ({ctx.author.id}).").format(ctx=ctx)
         new_channel = await old_channel.clone(reason=reason)
@@ -123,7 +141,7 @@ class ClearChannel(Cog, DashboardIntegration):
             position=channel_position,
             reason=reason,
         )
-        self.log.info(
+        self.logger.info(
             f"{ctx.author} ({ctx.author.id}) deleted ALL messages in channel {old_channel.name} ({old_channel.id})."
         ),
         if config["first_message"]:
@@ -141,7 +159,12 @@ class ClearChannel(Cog, DashboardIntegration):
             else:
                 env = {
                     "user_name": ctx.author.display_name,
-                    "icon_url": ctx.author.display_avatar,
+                    "user_avatar_url": ctx.author.display_avatar.url,
+                    "user_mention": ctx.author.mention,
+                    "user_id": ctx.author.id,
+                    "channel_name": new_channel.name,
+                    "channel_mention": new_channel.mention,
+                    "channel_id": new_channel.id,
                 }
                 await CustomMessageConverter(**config["custom_message"]).send_message(
                     ctx, channel=new_channel, env=env

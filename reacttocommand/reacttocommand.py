@@ -10,9 +10,9 @@ import asyncio
 from redbot.core.utils.chat_formatting import inline
 
 try:
-    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
-except ImportError:
     from emoji import EMOJI_DATA  # emoji>=2.0.0
+except ImportError:
+    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
 
 # Credits:
 # General repo credits.
@@ -30,18 +30,6 @@ class Emoji(commands.EmojiConverter):
         if argument in EMOJI_DATA:
             return argument
         if argument in {
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "#",
-            "*",
             "🇦",
             "🇧",
             "🇨",
@@ -85,31 +73,15 @@ class ReactToCommand(Cog):
             identifier=205192943327321000143939875896557571750,  # 703485369742
             force_registration=True,
         )
-        self.CONFIG_SCHEMA = 2
-        self.reacttocommand_global: typing.Dict[str, typing.Optional[int]] = {
-            "CONFIG_SCHEMA": None,
-        }
-        self.reacttocommand_guild: typing.Dict[
-            str, typing.Dict[str, typing.Dict[str, typing.Dict[str, str]]]
-        ] = {
-            "react_commands": {},
-        }
-        self.config.register_global(**self.reacttocommand_global)
-        self.config.register_guild(**self.reacttocommand_guild)
+        self.CONFIG_SCHEMA: int = 2
+        self.config.register_global(CONFIG_SCHEMA=None)
+        self.config.register_guild(react_commands={})
 
         self.cache: typing.List[commands.Context] = []
 
     async def cog_load(self) -> None:
         await super().cog_load()
         await self.edit_config_schema()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def edit_config_schema(self) -> None:
         CONFIG_SCHEMA = await self.config.CONFIG_SCHEMA()
@@ -128,7 +100,7 @@ class ReactToCommand(Cog):
         if CONFIG_SCHEMA < self.CONFIG_SCHEMA:
             CONFIG_SCHEMA = self.CONFIG_SCHEMA
             await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
-        self.log.info(
+        self.logger.info(
             f"The Config schema has been successfully modified to {self.CONFIG_SCHEMA} for the {self.qualified_name} cog."
         )
 
@@ -207,7 +179,7 @@ class ReactToCommand(Cog):
         self.cache.remove(ctx)
         if isinstance(error, commands.CommandInvokeError):
             await asyncio.sleep(0.7)
-            self.log.error(
+            self.logger.error(
                 f"This exception in the '{ctx.command.qualified_name}' command may have been triggered by the use of ReactToCommand. Check that the same error occurs with the text command, before reporting it.",
                 exc_info=None,
             )

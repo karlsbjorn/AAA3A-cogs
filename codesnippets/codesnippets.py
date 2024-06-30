@@ -63,7 +63,7 @@ _ = Translator("CodeSnippets", __file__)
 
 
 @cog_i18n(_)
-class CodeSnippets(Cog, DashboardIntegration):
+class CodeSnippets(DashboardIntegration, Cog):
     """A cog to send code content from a GitHub/Gist/GitLab/BitBucket/Pastebin/Hastebin URL!"""
 
     def __init__(self, bot: Red) -> None:
@@ -74,10 +74,9 @@ class CodeSnippets(Cog, DashboardIntegration):
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.codesnippets_guild: typing.Dict[str, typing.List] = {
-            "channels": [],
-        }
-        self.config.register_guild(**self.codesnippets_guild)
+        self.config.register_guild(
+            channels=[],
+        )
 
         self.pattern_handlers = {
             GITHUB_RE: self.fetch_github_snippet,
@@ -124,14 +123,6 @@ class CodeSnippets(Cog, DashboardIntegration):
         if self._session is not None:
             await self._session.close()
         await super().cog_unload()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> typing.Any:
         if "github.com" in url:
@@ -461,7 +452,7 @@ class CodeSnippets(Cog, DashboardIntegration):
                 except (RuntimeError, aiohttp.ClientResponseError) as e:
                     if e.status == 404:
                         continue
-                    self.log.error(
+                    self.logger.error(
                         f"Failed to fetch code snippet from {_match[0]!r}: {e.status} for GET {e.request_info.real_url.human_repr()}.",
                         exc_info=e,
                     )

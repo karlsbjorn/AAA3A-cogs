@@ -1,7 +1,7 @@
 ﻿from AAA3A_utils import Cog, Menu  # isort:skip
 from redbot.core import commands, app_commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -135,14 +135,6 @@ class RunCode(Cog):
             await self._session.close()
         await super().cog_unload()
 
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     async def load_wandbox_languages(
         self, force: typing.Optional[bool] = False
     ) -> typing.Dict[str, typing.Dict[str, typing.Dict[str, typing.Dict[str, str]]]]:
@@ -153,7 +145,7 @@ class RunCode(Cog):
             result = await r.json()
         for info in result:
             language = info["language"]
-            if language not in ["CPP", "OpenSSL"]:
+            if language not in ("CPP", "OpenSSL"):
                 if language.endswith(" script"):  # Bash and Vim
                     language = language[:-7]
                 if language not in self.wandbox_languages:

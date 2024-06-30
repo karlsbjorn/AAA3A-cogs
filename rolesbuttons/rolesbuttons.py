@@ -26,7 +26,9 @@ class MyMessageConverter(commands.MessageConverter):
         message = await super().convert(ctx, argument=argument)
         if message.author != ctx.me:
             raise commands.UserFeedbackCheckFailure(
-                _("I have to be the author of the message. You can use EmbedUtils by AAA3A to send one.")
+                _(
+                    "I have to be the author of the message. You can use EmbedUtils by AAA3A to send one."
+                )
             )
         return message
 
@@ -43,28 +45,17 @@ class RolesButtons(Cog):
             identifier=205192943327321000143939875896557571750,  # 370638632963
             force_registration=True,
         )
-        self.CONFIG_SCHEMA = 2
-        self.roles_buttons_global: typing.Dict[str, typing.Optional[int]] = {
-            "CONFIG_SCHEMA": None,
-        }
-        self.roles_buttons_guild: typing.Dict[
-            str, typing.Dict[str, typing.Dict[str, typing.Dict[str, str]]]
-        ] = {"roles_buttons": {}, "modes": {}}
-        self.config.register_global(**self.roles_buttons_global)
-        self.config.register_guild(**self.roles_buttons_guild)
+        self.CONFIG_SCHEMA: int = 2
+        self.config.register_global(CONFIG_SCHEMA=None)
+        self.config.register_guild(
+            roles_buttons={},
+            modes={},
+        )
 
     async def cog_load(self) -> None:
         await super().cog_load()
         await self.edit_config_schema()
         asyncio.create_task(self.load_buttons())
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def edit_config_schema(self) -> None:
         CONFIG_SCHEMA = await self.config.CONFIG_SCHEMA()
@@ -91,7 +82,7 @@ class RolesButtons(Cog):
         if CONFIG_SCHEMA < self.CONFIG_SCHEMA:
             CONFIG_SCHEMA = self.CONFIG_SCHEMA
             await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
-        self.log.info(
+        self.logger.info(
             f"The Config schema has been successfully modified to {self.CONFIG_SCHEMA} for the {self.qualified_name} cog."
         )
 
@@ -110,7 +101,7 @@ class RolesButtons(Cog):
                     self.bot.add_view(view, message_id=message_id)
                     self.views[discord.PartialMessage(channel=channel, id=message_id)] = view
                 except Exception as e:
-                    self.log.error(
+                    self.logger.error(
                         f"The Button View could not be added correctly for the `{guild}-{message}` message.",
                         exc_info=e,
                     )

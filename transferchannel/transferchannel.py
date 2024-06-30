@@ -1,7 +1,7 @@
 from AAA3A_utils import Cog, CogsUtils, Menu  # isort:skip
 from redbot.core import commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -45,17 +45,6 @@ class MessageOrObjectConverter(commands.Converter):
 class TransferChannel(Cog):
     """A cog to transfer messages from a channel to another channel, with many options!"""
 
-    def __init__(self, bot: Red) -> None:
-        super().__init__(bot=bot)
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     def embed_from_msg(self, message: discord.Message) -> discord.Embed:
         content = message.content
         channel = message.channel
@@ -79,7 +68,7 @@ class TransferChannel(Cog):
             a = message.attachments[0]
             fname = a.filename
             url = a.url
-            if fname.split(".")[-1] in ["WEBP", "jpg", "gif", "jpeg"]:
+            if fname.split(".")[-1] in ("WEBP", "jpg", "gif", "jpeg"):
                 em.set_image(url=url)
             else:
                 em.add_field(
@@ -133,7 +122,14 @@ class TransferChannel(Cog):
     ) -> typing.Tuple[int, typing.List[discord.Message]]:
         messages = []
         async for message in channel.history(
-            limit=(limit if channel != ctx.message.channel and ctx.interaction is None else limit + 1) if limit is not None else None, before=before, after=after, oldest_first=False
+            limit=(
+                limit if channel != ctx.message.channel and ctx.interaction is None else limit + 1
+            )
+            if limit is not None
+            else None,
+            before=before,
+            after=after,
+            oldest_first=False,
         ):
             if message.type not in (discord.MessageType.default, discord.MessageType.reply):
                 continue
@@ -169,7 +165,12 @@ class TransferChannel(Cog):
             count_messages, messages = await self.get_messages(ctx, channel=source, **kwargs)
         messages.reverse()
         if way == "webhooks":
-            hook = await CogsUtils.get_hook(bot=ctx.bot, channel=destination.parent if isinstance(destination, discord.Thread) else destination)
+            hook = await CogsUtils.get_hook(
+                bot=ctx.bot,
+                channel=destination.parent
+                if isinstance(destination, discord.Thread)
+                else destination,
+            )
         for message in messages:
             if destination.permissions_for(destination.guild.me).attach_files:
                 files = await Tunnel.files_from_attatch(message)
@@ -188,7 +189,9 @@ class TransferChannel(Cog):
                         allowed_mentions=discord.AllowedMentions(
                             everyone=False, users=False, roles=False
                         ),
-                        thread=destination if isinstance(destination, discord.Thread) else discord.utils.MISSING,
+                        thread=destination
+                        if isinstance(destination, discord.Thread)
+                        else discord.utils.MISSING,
                         wait=True,
                     )
             elif way == "embeds":

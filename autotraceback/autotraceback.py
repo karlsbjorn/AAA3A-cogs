@@ -1,7 +1,7 @@
 ﻿from AAA3A_utils import Cog, CogsUtils, Menu  # isort:skip
 from redbot.core import commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -30,21 +30,13 @@ IGNORED_ERRORS = (
 
 
 @cog_i18n(_)
-class AutoTraceback(Cog, DashboardIntegration):
+class AutoTraceback(DashboardIntegration, Cog):
     """A cog to display the error traceback of a command automatically after the error!"""
 
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
 
         self.tracebacks: typing.List[str] = []
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     @commands.is_owner()
     @commands.hybrid_command()

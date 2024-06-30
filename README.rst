@@ -91,7 +91,7 @@ Support
 -------
 
 Check out my docs `here <https://aaa3a-cogs.readthedocs.io/en/latest/>`_.
-Mention me in the #support_othercogs in the `cog support server <https://discord.gg/GET4DVk>`_ if you need any help.
+Mention me in the #support_aaa3a-cogs channel in the `cogs support server <https://discord.gg/red-cog-support-240154543684321280>`_ if you need any help.
 Please ping me or contact me in DM.
 Additionally, feel free to open an issue or pull request to this repo.
 
@@ -99,7 +99,7 @@ Additionally, feel free to open an issue or pull request to this repo.
 Support Me
 ----------
 
-I'm creating these cogs on my free time. If you like my work, please consider donating on my `Buy Me a Coffee page <https://www.buymeacoffee.com/aaa3a>`_!
+I'm creating these cogs on my free time. If you like my work, please consider donating on `Buy Me a Coffee <https://www.buymeacoffee.com/aaa3a>`_ or `Ko-Fi <https://ko-fi.com/aaa3a>`_!
 
 -------
 Credits

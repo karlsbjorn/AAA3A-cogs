@@ -14,11 +14,11 @@ from functools import partial
 import yaml
 
 try:
-    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
-except ImportError:
     from emoji import EMOJI_DATA  # emoji>=2.0.0
+except ImportError:
+    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
 
-from redbot.core.utils.chat_formatting import humanize_list, box
+from redbot.core.utils.chat_formatting import box, humanize_list
 
 # Credits:
 # General repo credits.
@@ -31,7 +31,9 @@ class MyMessageConverter(commands.MessageConverter):
         message = await super().convert(ctx, argument=argument)
         if message.author != ctx.me:
             raise commands.UserFeedbackCheckFailure(
-                _("I have to be the author of the message. You can use EmbedUtils by AAA3A to send one.")
+                _(
+                    "I have to be the author of the message. You can use EmbedUtils by AAA3A to send one."
+                )
             )
         return message
 
@@ -44,18 +46,6 @@ class Emoji(commands.EmojiConverter):
         if argument in EMOJI_DATA:
             return argument
         if argument in {
-            "0",
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "#",
-            "*",
             "🇦",
             "🇧",
             "🇨",
@@ -100,6 +90,16 @@ class RoleOrMemberConverter(commands.Converter):
                 raise e
 
 
+def convert_to_bool(argument: typing.Any) -> bool:
+    lowered = str(argument).lower().strip()
+    if lowered in {"yes", "y", "true", "t", "1", "enable", "on"}:
+        return True
+    elif lowered in {"no", "n", "false", "f", "0", "disable", "off"}:
+        return False
+    else:
+        raise commands.BadBoolArgument(lowered)
+
+
 class ModalConverter(commands.Converter):
     async def convert(
         self, ctx: commands.Context, argument: str
@@ -117,10 +117,12 @@ class ModalConverter(commands.Converter):
         optional_arguments = [
             "channel",
             "anonymous",
+            "unique_answer",
             "messages",
             "pings",
             "whitelist_roles",
             "blacklist_roles",
+            "assign_roles",
         ]
         for arg in required_arguments:
             if arg not in argument_dict:
@@ -226,17 +228,6 @@ class ModalConverter(commands.Converter):
             else:
                 input["style"] = 2
             if "required" in input:
-
-                def convert_to_bool(argument: str) -> bool:
-                    lowered = argument.lower()
-                    if lowered in {"yes", "y", "true", "t", "1", "enable", "on"}:
-                        return True
-                    elif lowered in {"no", "n", "false", "f", "0", "disable", "off"}:
-                        return False
-                    else:
-                        raise commands.BadBoolArgument(lowered)
-
-                input["required"] = str(input["required"])
                 try:
                     input["required"] = convert_to_bool(input["required"])
                 except commands.BadBoolArgument:
@@ -296,6 +287,23 @@ class ModalConverter(commands.Converter):
         # anonymous
         if "anonymous" not in argument_dict:
             argument_dict["anonymous"] = False
+        else:
+            try:
+                argument_dict["anonymous"] = convert_to_bool(argument_dict["anonymous"])
+            except commands.BadBoolArgument:
+                raise commands.BadArgument(
+                    _("The argument `/anonymous` must be a boolean (True or False).")
+                )
+        # unique_answer
+        if "unique_answer" not in argument_dict:
+            argument_dict["unique_answer"] = False
+        else:
+            try:
+                argument_dict["unique_answer"] = convert_to_bool(argument_dict["unique_answer"])
+            except commands.BadBoolArgument:
+                raise commands.BadArgument(
+                    _("The argument `/unique_answer` must be a boolean (True or False).")
+                )
         # messages
         if "messages" in argument_dict:
             if "error" not in argument_dict["messages"]:
@@ -305,25 +313,35 @@ class ModalConverter(commands.Converter):
         else:
             argument_dict["messages"] = {"error": None, "submit": None}
         if "pings" not in argument_dict:
-            argument_dict["pings"] = None
+            argument_dict["pings"] = []
         else:
             argument_dict["pings"] = [
                 (await RoleOrMemberConverter().convert(ctx, argument=ping.strip())).mention
                 for ping in re.split(r",|;|\||-", str(argument_dict["pings"]))
             ]
         if "whitelist_roles" not in argument_dict:
-            argument_dict["whitelist_roles"] = None
+            argument_dict["whitelist_roles"] = []
         else:
             argument_dict["whitelist_roles"] = [
                 (await commands.RoleConverter().convert(ctx, argument=ping.strip())).id
                 for ping in re.split(r",|;|\||-", str(argument_dict["whitelist_roles"]))
             ]
         if "blacklist_roles" not in argument_dict:
-            argument_dict["blacklist_roles"] = None
+            argument_dict["blacklist_roles"] = []
         else:
             argument_dict["blacklist_roles"] = [
                 (await commands.RoleConverter().convert(ctx, argument=ping.strip())).id
                 for ping in re.split(r",|;|\||-", str(argument_dict["blacklist_roles"]))
+            ]
+        if "assign_roles" not in argument_dict:
+            argument_dict["assign_roles"] = []
+        else:
+            argument_dict["assign_roles"] = [
+                role.id
+                for ping in re.split(r",|;|\||-", str(argument_dict["assign_roles"]))
+                if (role := (await commands.RoleConverter().convert(ctx, argument=ping.strip())))
+                < ctx.author.top_role
+                and role < ctx.me.top_role
             ]
         return argument_dict
 
@@ -340,30 +358,14 @@ class DiscordModals(Cog):
             identifier=205192943327321000143939875896557571750,  # 897374386384
             force_registration=True,
         )
-        self.CONFIG_SCHEMA: int = 2
-        self.discordmodals_global: typing.Dict[str, typing.Optional[int]] = {
-            "CONFIG_SCHEMA": None,
-        }
-        self.discordmodals_guild: typing.Dict[
-            str, typing.Dict[str, typing.Union[str, typing.Dict[str, typing.Any]]]
-        ] = {
-            "modals": {},
-        }
-        self.config.register_global(**self.discordmodals_global)
-        self.config.register_guild(**self.discordmodals_guild)
+        self.CONFIG_SCHEMA: int = 3
+        self.config.register_global(CONFIG_SCHEMA=None)
+        self.config.register_guild(modals={})
 
     async def cog_load(self) -> None:
         await super().cog_load()
         await self.edit_config_schema()
         asyncio.create_task(self.load_buttons())
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def edit_config_schema(self) -> None:
         CONFIG_SCHEMA = await self.config.CONFIG_SCHEMA()
@@ -394,15 +396,30 @@ class DiscordModals(Cog):
                             **guilds_data[guild]["modals"][modal]["button"]["buttons"][0]
                         )
                         guilds_data[guild]["modals"][modal]["button"] = button_data
-                        for key in ["members", "check", "function", "function_args"]:
+                        for key in ("members", "check", "function", "function_args"):
                             if key in guilds_data[guild]["modals"][modal]["modal"]:
                                 del guilds_data[guild]["modals"][modal]["modal"][key]
             CONFIG_SCHEMA = 2
             await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
+        if CONFIG_SCHEMA == 2:
+            guild_group = self.config._get_base_group(self.config.GUILD)
+            async with guild_group.all() as guilds_data:
+                _guilds_data = deepcopy(guilds_data)
+                for guild in _guilds_data:
+                    for modal in guilds_data[guild]["modals"]:
+                        if "unique_answer" not in guilds_data[guild]["modals"][modal]:
+                            guilds_data[guild]["modals"][modal]["unique_answer"] = False
+                            guilds_data[guild]["modals"][modal]["existing_answers"] = []
+                        for key in ("whitelist_roles", "blacklist_roles", "assign_roles"):
+                            if guilds_data[guild]["modals"][modal].get(key) is None:
+                                guilds_data[guild]["modals"][modal][key] = []
+
+            CONFIG_SCHEMA = 3
+            await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
         if CONFIG_SCHEMA < self.CONFIG_SCHEMA:
             CONFIG_SCHEMA = self.CONFIG_SCHEMA
             await self.config.CONFIG_SCHEMA.set(CONFIG_SCHEMA)
-        self.log.info(
+        self.logger.info(
             f"The Config schema has been successfully modified to {self.CONFIG_SCHEMA} for the {self.qualified_name} cog."
         )
 
@@ -429,7 +446,7 @@ class DiscordModals(Cog):
                     self.bot.add_view(view, message_id=message_id)
                     self.views[discord.PartialMessage(channel=channel, id=message_id)] = view
                 except Exception as e:
-                    self.log.error(
+                    self.logger.error(
                         f"The Button View could not be added correctly for the `{guild}-{message}` message.",
                         exc_info=e,
                     )
@@ -446,12 +463,9 @@ class DiscordModals(Cog):
                 _("This message is not in Config."), ephemeral=True
             )
             return
-        whitelist_roles = config[f"{interaction.message.channel.id}-{interaction.message.id}"].get(
-            "whitelist_roles"
-        )
-        blacklist_roles = config[f"{interaction.message.channel.id}-{interaction.message.id}"].get(
-            "blacklist_roles"
-        )
+        config = config[f"{interaction.message.channel.id}-{interaction.message.id}"]
+        whitelist_roles = config["whitelist_roles"]
+        blacklist_roles = config["blacklist_roles"]
         if (
             whitelist_roles
             and all(role.id not in whitelist_roles for role in interaction.user.roles)
@@ -464,10 +478,19 @@ class DiscordModals(Cog):
                 "You are not allowed to use this interaction.", ephemeral=True
             )
             return
-        try:
-            modal_config = config[f"{interaction.message.channel.id}-{interaction.message.id}"][
-                "modal"
+        if (
+            config["unique_answer"]
+            and interaction.user.id
+            in config[
+                "existing_answers"
             ]
+        ):
+            await interaction.response.send_message(
+                "You have already answered this Modal.", ephemeral=True
+            )
+            return
+        try:
+            modal_config = config["modal"]
             modal = discord.ui.Modal(
                 title=modal_config["title"],
                 timeout=modal_config["timeout"],
@@ -485,7 +508,7 @@ class DiscordModals(Cog):
             modal.on_submit = partial(self.send_embed_with_responses, inputs=inputs)
             await interaction.response.send_modal(modal)
         except Exception as e:
-            self.log.error(
+            self.logger.error(
                 f"The Modal of the {interaction.message.guild.id}-{interaction.message.channel.id}-{interaction.message.id} message did not work properly.",
                 exc_info=e,
             )
@@ -500,9 +523,9 @@ class DiscordModals(Cog):
         config = await self.config.guild(interaction.message.guild).modals()
         if f"{interaction.message.channel.id}-{interaction.message.id}" not in config:
             return
+        config = config[f"{interaction.message.channel.id}-{interaction.message.id}"]
         if not interaction.response.is_done():
             await interaction.response.defer(ephemeral=True)
-        config = config[f"{interaction.message.channel.id}-{interaction.message.id}"]
         try:
             channel = interaction.guild.get_channel(config["channel"])
             if channel is None:
@@ -532,7 +555,8 @@ class DiscordModals(Cog):
             embed.title = config["title"]
             if not config.get("anonymous"):
                 embed.set_author(
-                    name=f"{interaction.user.display_name} ({interaction.user.id})", icon_url=interaction.user.display_avatar
+                    name=f"{interaction.user.display_name} ({interaction.user.id})",
+                    icon_url=interaction.user.display_avatar,
                 )
                 embed.color = interaction.user.color
             else:
@@ -551,12 +575,31 @@ class DiscordModals(Cog):
                     pass
             embed.set_footer(text=interaction.guild.name, icon_url=interaction.guild.icon)
             await channel.send(
-                None if config.get("pings") is None else humanize_list(config.get("pings"))[:2000],
+                None if config["pings"] is None else humanize_list(config["pings"])[:2000],
                 embed=embed,
                 allowed_mentions=discord.AllowedMentions(everyone=False, users=True, roles=True),
             )
+            for role_id in config["assign_roles"]:
+                role = interaction.guild.get_role(role_id)
+                if role is None:
+                    await interaction.followup.send(
+                        _(
+                            "The role that was to be assigned no longer exists. Please notify an administrator."
+                        ),
+                        ephemeral=True,
+                    )
+                    continue
+                try:
+                    await interaction.user.add_roles(role, reason="DiscordModals")
+                except discord.HTTPException:
+                    await interaction.followup.send(
+                        _(
+                            "The role that was to be assigned could not be assigned. Please notify an administrator."
+                        ),
+                        ephemeral=True,
+                    )
         except Exception as e:
-            self.log.error(
+            self.logger.error(
                 f"The Modal of the {interaction.message.guild.id}-{interaction.message.channel.id}-{interaction.message.id} message did not work properly.",
                 exc_info=e,
             )
@@ -564,6 +607,11 @@ class DiscordModals(Cog):
                 config["messages"]["error"] or _("Sorry. An error has occurred."), ephemeral=True
             )
         else:
+            if interaction.user.id not in config["existing_answers"]:
+                config["existing_answers"].append(interaction.user.id)
+                await self.config.guild(interaction.guild).modals.set_raw(
+                    f"{interaction.message.channel.id}-{interaction.message.id}", value=config
+                )
             await interaction.followup.send(
                 config["messages"]["submit"] or _("Thank you for sending this Modal!"),
                 ephemeral=True,
@@ -612,14 +660,16 @@ class DiscordModals(Cog):
             max_length: None
         channel: general # id, mention, name
         anonymous: False
+        unique_answer: False
         messages:
           error: Error!
           submit: Form submitted.
         pings: user1, user2, role1, role2
         whitelist_roles: role1, role2
         blacklist_roles: role3, role4
+        assign_roles: role5, role6
         ```
-        The `emoji`, `style`, `required`, `default`, `placeholder`, `min_length`, `max_length`, `channel`, `anonymous`, `messages`, `pings`, `whitelist_roles` and `blacklist_roles` are not required.
+        The `emoji`, `style`, `required`, `default`, `placeholder`, `min_length`, `max_length`, `channel`, `anonymous`, `unique_answer`, `messages`, `pings`, `whitelist_roles`, `blacklist_roles` and `assign_roles` are not required.
         """
         config = await self.config.guild(ctx.guild).modals.all()
         if f"{message.channel.id}-{message.id}" in config:
@@ -669,6 +719,7 @@ class DiscordModals(Cog):
                 "inputs": argument["modal"],
             },
             "anonymous": argument["anonymous"],
+            "unique_answer": argument["unique_answer"],
             "messages": {
                 "error": argument["messages"]["error"],
                 "submit": argument["messages"]["submit"],
@@ -676,6 +727,8 @@ class DiscordModals(Cog):
             "pings": argument["pings"],
             "whitelist_roles": argument["whitelist_roles"],
             "blacklist_roles": argument["blacklist_roles"],
+            "assign_roles": argument["assign_roles"],
+            "existing_answers": [],
         }
         await self.config.guild(ctx.guild).modals.set(config)
         await ctx.send(_("Modal created."))
@@ -690,9 +743,7 @@ class DiscordModals(Cog):
         if message is None:
             _modals = list(modals.values()).copy()
         elif f"{message.channel.id}-{message.id}" not in modals:
-            raise commands.UserFeedbackCheckFailure(
-                _("No modal is configured for this message.")
-            )
+            raise commands.UserFeedbackCheckFailure(_("No modal is configured for this message."))
         else:
             _modals = modals.copy()
             _modals = [modals[f"{message.channel.id}-{message.id}"]]
@@ -703,7 +754,9 @@ class DiscordModals(Cog):
             color=await ctx.embed_color(),
         )
         embed.set_author(name=ctx.guild.name, icon_url=ctx.guild.icon)
-        embed.set_footer(text=_("There is {len_modals} modals in this server.").format(len_modals=len(modals)))
+        embed.set_footer(
+            text=_("There is {len_modals} modals in this server.").format(len_modals=len(modals))
+        )
         embeds = []
         for modal in _modals:
             e = embed.copy()

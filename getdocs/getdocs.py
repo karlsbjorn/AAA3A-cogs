@@ -94,7 +94,7 @@ def get_object_size(obj: typing.Any) -> int:
 
 # https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
 def sizeof_fmt(num, suffix: str = "B") -> str:
-    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024.0:
             return f"{num:3.1f} {unit}{suffix}"
         num /= 1024.0
@@ -227,24 +227,24 @@ class StrConverter(commands.Converter):
 
 
 @cog_i18n(_)
-class GetDocs(Cog, DashboardIntegration):
+class GetDocs(DashboardIntegration, Cog):
     """A cog to get and display some documentations in Discord! Use `[p]listsources` to get a list of all the available sources."""
+
+    __authors__: typing.List[str] = ["AAA3A", "amyrinbot"]
 
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["AAA3A", "amyrinbot"]
 
         self.config: Config = Config.get_conf(
             self,
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.getdocs_global: typing.Dict[str, typing.Union[str, bool, typing.List[str]]] = {
-            "default_source": "discord.py",
-            "caching": True,
-            "enabled_sources": ["discord.py", "redbot", "aiohttp", "discordapi"],
-        }
-        self.config.register_global(**self.getdocs_global)
+        self.config.register_global(
+            default_source="discord.py",
+            caching=True,
+            enabled_sources=["discord.py", "redbot", "aiohttp", "discordapi"],
+        )
 
         self.documentations: typing.Dict[str, Source] = {}
         self._docs_stats: typing.Dict[str, int] = {"GLOBAL": {"manuals": 0, "documentations": 0}}
@@ -307,14 +307,6 @@ class GetDocs(Cog, DashboardIntegration):
         await super().cog_unload()  # Close loops before session closing.
         if self._session is not None:
             await self._session.close()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     @commands.bot_has_permissions(embed_links=True)
     @commands.hybrid_command(
@@ -412,7 +404,7 @@ class GetDocs(Cog, DashboardIntegration):
                     )
                 source = "discord.py"
         source: Source = self.documentations[source]
-        if query in ["", "events"]:
+        if query in ("", "events"):
             limit = None
         try:
             result = await source.search(query.strip(), limit=limit, exclude_std=not with_std)
@@ -516,7 +508,7 @@ class GetDocs(Cog, DashboardIntegration):
         source, result = await self.query_autocomplete(
             interaction, current, exclude_std=exclude_std
         )
-        if not current and source.name in ["discord.py", "redbot", "pylav"]:
+        if not current and source.name in ("discord.py", "redbot", "pylav"):
             result.insert(0, app_commands.Choice(name="events", value="events"))
         return result[:25]
 
@@ -700,12 +692,12 @@ class GetDocs(Cog, DashboardIntegration):
             if documentation.parameters
             else "No parameter(s)",
         }
-        for _type in ["attributes", "properties", "methods"]:
+        for _type in ("attributes", "properties", "methods"):
             if getattr(documentation.attributes, _type):
-                # result += f"{_type.capitalize()}:\n{BREAK_LINE.join([f'• {inline(attribute.name)}' for _type in ['attributes', 'properties', 'methods'] for attribute in getattr(documentation.attributes, _type).values()]) or 'No attribute(s)'}.\n"
+                # result += f"{_type.capitalize()}:\n{BREAK_LINE.join([f'• {inline(attribute.name)}' for _type in ('attributes', 'properties', 'methods') for attribute in getattr(documentation.attributes, _type).values()]) or 'No attribute(s)'}.\n"
                 data[
                     _type.capitalize()
-                ] = f"{humanize_list([inline(attribute.name) for _type in ['attributes', 'properties', 'methods'] for attribute in getattr(documentation.attributes, _type).values()])}."
+                ] = f"{humanize_list([inline(attribute.name) for _type in ('attributes', 'properties', 'methods') for attribute in getattr(documentation.attributes, _type).values()])}."
         return [f"{key}: {value}\n" for key, value in data.items() if value is not None]
 
 
@@ -782,7 +774,7 @@ class Source:
     async def _build_rtfm_cache(self, recache: bool = False) -> Inventory:
         if self._rtfm_cache is not None and not recache:
             return self._rtfm_cache
-        self.cog.log.debug(f"`{self.name}`: Starting RTFM caching...")
+        self.cog.logger.debug(f"`{self.name}`: Starting RTFM caching...")
         partial = (
             functools.partial(Inventory, url=self._rtfm_cache_url)
             if self.url.startswith("http")
@@ -800,7 +792,7 @@ class Source:
             self._raw_rtfm_cache_with_std.append(item.name)
             if item.domain != "std":
                 self._raw_rtfm_cache_without_std.append(item.name)
-        self.cog.log.debug(f"`{self.name}`: RTFM cache built.")
+        self.cog.logger.debug(f"`{self.name}`: RTFM cache built.")
         return self._rtfm_cache
 
     async def _build_docs_cache(
@@ -810,7 +802,7 @@ class Source:
             return self._docs_cache
         self._docs_cache = []
         self._result_docs_cache = {}
-        self.cog.log.debug(f"`{self.name}`: Starting Documentations caching...")
+        self.cog.logger.debug(f"`{self.name}`: Starting Documentations caching...")
         start = time.monotonic()
         self.cog._docs_stats[self.name] = {"manuals": 0, "documentations": 0}
 
@@ -859,11 +851,11 @@ class Source:
                     self.cog._docs_stats["GLOBAL"]["manuals"] += 1
                     self.cog._docs_stats[self.name]["documentations"] += len(documentations)
                     self.cog._docs_stats["GLOBAL"]["documentations"] += len(documentations)
-                    self.cog.log.verbose(
+                    self.cog.logger.verbose(
                         f"`{self.name}`: `{name}` documentation added to documentation cache."
                     )
                 except Exception as e:
-                    self.cog.log.debug(
+                    self.cog.logger.debug(
                         f"`{self.name}`: Error occured while trying to cache `{name}` documentation.",
                         exc_info=e,
                     )
@@ -878,7 +870,7 @@ class Source:
         size = get_object_size(self._docs_cache)
         self.cog._docs_sizes[self.name] = size
         self.cog._docs_sizes["GLOBAL"] += size
-        self.cog.log.debug(
+        self.cog.logger.debug(
             f"`{self.name}`: Successfully cached {amount} Documentations/{len(manuals)} manuals."
         )
         return self._docs_cache
@@ -900,7 +892,7 @@ class Source:
             )
             result = await loop.run_in_executor(None, partial)
             if result.returncode != 0:
-                self.cog.log.error(
+                self.cog.logger.error(
                     f"`{self.name}`: Error occured while trying to clone Discord API Docs's GitHub repo."
                 )
                 return self._rtfm_cache, [], []
@@ -1015,7 +1007,7 @@ class Source:
                                             f'"{_kwarg.split(".")[0].upper()}_ID",  # snowflake'
                                             if _kwarg.split(".")[-1] == "id"
                                             and _kwarg.split(".")[-2]
-                                            in [
+                                            in (
                                                 "user",
                                                 "member",
                                                 "guild",
@@ -1023,7 +1015,7 @@ class Source:
                                                 "role",
                                                 "message",
                                                 "application",
-                                            ]
+                                            )
                                             else "MISSING,"
                                         )
                                         example += _kwarg_raw
@@ -1050,16 +1042,17 @@ class Source:
                                             if len(_param) <= 2 or len(_param[0]) <= 3:
                                                 continue
                                             _param_raw = "\n    "
+                                            to_replace = "\\*"
                                             if _param[0][2:].strip().endswith("?"):
                                                 _param_raw += (
-                                                    f'# ? "{_param[0][2:].strip()[:-1]}": '
+                                                    f'# ? "{_param[0][2:].replace(to_replace, "").strip()[:-1]}": '
                                                 )
                                             elif _param[0][2:].strip().endswith("?\\*"):
                                                 _param_raw += (
                                                     f'# ?\\* "{_param[0][2:].strip()[:-3]}": '
                                                 )
                                             else:
-                                                _param_raw += f'"{_param[0][2:].strip()}": '
+                                                _param_raw += f'"{_param[0][2:].replace(to_replace, "").strip()}": '
                                             if (
                                                 len(fields[key].split("\n")[0].split(" | ")) > 3
                                                 and "default"
@@ -1116,11 +1109,11 @@ class Source:
                             )
                             documentations.append(documentation)
                             self._docs_cache.append(documentation)
-                        self.cog.log.verbose(
+                        self.cog.logger.verbose(
                             f"`{self.name}`: `{name}` documentation added to documentation cache."
                         )
                     except Exception as e:
-                        self.cog.log.debug(
+                        self.cog.logger.debug(
                             f"`{self.name}`: Error occured while trying to cache `{name}` documentation.",
                             exc_info=e,
                         )
@@ -1191,11 +1184,11 @@ class Source:
                 )
                 documentations.append(documentation)
                 self._docs_cache.append(documentation)
-                self.cog.log.verbose(
+                self.cog.logger.verbose(
                     f"`{self.name}`: `{manual[0]}` documentation added to documentation cache."
                 )
             except Exception as e:
-                self.cog.log.debug(
+                self.cog.logger.debug(
                     f"`{self.name}`: Error occured while trying to cache `{manual[0]}` documentation.",
                     exc_info=e,
                 )
@@ -1221,7 +1214,7 @@ class Source:
             for potential_manual in soup.find_all("a")
             if potential_manual.attrs.get("href") is not None
             and potential_manual.attrs["href"].startswith("/wiki/API_")
-            and potential_manual.text.strip() not in ["API changes", "loadstring"]
+            and potential_manual.text.strip() not in ("API changes", "loadstring")
         )
         # Iter manuals.
         for manual in manuals:
@@ -1258,7 +1251,7 @@ class Source:
                                 fields_values.remove(field_value)
                     used_fields_values = set()
                     for field_label in fields_labels:
-                        if field_label.text.strip().lower() in ["patch changes"]:
+                        if field_label.text.strip().lower() in ("patch changes"):
                             continue
                         _field_value = self._get_text(
                             fields_values.pop(0), parsed_url=self.url.split("/wiki")[0]
@@ -1310,11 +1303,11 @@ class Source:
                 )
                 documentations.append(documentation)
                 self._docs_cache.append(documentation)
-                self.cog.log.verbose(
+                self.cog.logger.verbose(
                     f"`{self.name}`: `{manual[0]}` documentation added to documentation cache."
                 )
             except Exception as e:
-                self.cog.log.debug(
+                self.cog.logger.debug(
                     f"`{self.name}`: Error occured while trying to cache `{manual[0]}` documentation.",
                     exc_info=e,
                 )
@@ -1371,7 +1364,13 @@ class Source:
     @executor()
     def _get_documentation(self, element: Tag, page_url: str) -> Documentation:
         signature = element.text
-        signature = signature.strip().replace("¶", "").replace("", "").replace("\n", "").replace("```", "\u02CB\u02CB\u02CB")
+        signature = (
+            signature.strip()
+            .replace("¶", "")
+            .replace("", "")
+            .replace("\n", "")
+            .replace("```", "\u02CB\u02CB\u02CB")
+        )
         if signature.endswith("[source]"):
             signature = signature[:-8]
         elif signature.endswith("[source]#"):
@@ -1691,10 +1690,10 @@ class Source:
             if result is not None:
                 results.append(result)
         # Add attributes for Python stdtypes.
-        if self.name == "python" and page_url[len(self.url) :] in [
+        if self.name == "python" and page_url[len(self.url) :] in (
             "library/stdtypes.html",
             "tutorial/datastructures.html",
-        ]:
+        ):
             for documentation in results:
                 if len(documentation.name.split(".")) > 1:
                     parent_name = ".".join(documentation.name.split(".")[:-1])
@@ -1786,7 +1785,7 @@ class Source:
                     if query.lower() == name:
                         query = f"aiohttp.ClientSession.{name.lower()}"
                         break
-        if self.name in ["discord.py", "redbot"]:
+        if self.name in ("discord.py", "redbot"):
             if query.split(".")[0] == "ctx":
                 query = f"commands.Context{query[4:]}"
             if self.name == "discord.py":
@@ -1799,7 +1798,7 @@ class Source:
             return matches[:limit]
 
         def get_name(obj: DataObjStr) -> str:
-            name = obj.name or (obj.dispname if obj.dispname not in ["-", None] else None)
+            name = obj.name or (obj.dispname if obj.dispname not in ("-", None) else None)
             original_name = name
             if obj.domain == "std" or obj.role == "command" or self.name == "discordapi":
                 name = f"{obj.role}: {name}"
@@ -1834,7 +1833,7 @@ class Source:
                 location = CogsUtils.replace_var_paths(location)
             return urljoin(self.url, location)
 
-        if self.name in ["discord.py", "redbot", "pylav"] and query == "events":
+        if self.name in ("discord.py", "redbot", "pylav") and query == "events":
             exclude_std = True
             matches = [
                 item
@@ -1872,7 +1871,7 @@ class Source:
         #     elif f"discord.ext.commands.{name}" in self._raw_rtfm_cache_without_std:
         #         name = f"discord.ext.commands.{name}"
         documentation = discord.utils.get(self._docs_cache, name=name)
-        if self.name not in ["discordapi", "git", "warcraftapi"] and documentation is None:
+        if self.name not in ("discordapi", "git", "warcraftapi") and documentation is None:
             item = discord.utils.get(self._rtfm_cache.objects, name=name)
             location = item.uri
             if location.endswith("$"):

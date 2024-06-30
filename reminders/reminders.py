@@ -21,6 +21,7 @@ from .converters import (
     TimeConverter,
     TimezoneConverter,
 )  # NOQA
+from .dashboard_integration import DashboardIntegration
 from .types import Content, Data, Reminder, Repeat, RepeatRule
 from .views import ReminderView
 
@@ -65,7 +66,7 @@ async def remind_message_context_menu(interaction: discord.Interaction, message:
 
 
 @cog_i18n(_)
-class Reminders(Cog):
+class Reminders(DashboardIntegration, Cog):
     """Don't forget anything anymore! Reminders in DMs, channels, FIFO commands scheduler, say scheduler... With 'Me Too', snooze and buttons."""
 
     # To prevent circular imports...
@@ -81,23 +82,21 @@ class Reminders(Cog):
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.reminders_global: typing.Dict[str, typing.Union[int, bool]] = {
-            "total_sent": 0,
-            "maximum_user_reminders": 20,  # except bot owners
-            "me_too": True,
-            "repeat_allowed": True,
-            "minimum_repeat": 60 * 1,  # minutes, so 1 hour.
-            "fifo_allowed": False,
-            "creation_view": True,
-            "snooze_view": True,
-            "seconds_allowed": True,
-        }
-        self.reminders_user: typing.Dict[str, typing.List[Data]] = {
-            "timezone": None,
-            "reminders": {},
-        }
-        self.config.register_global(**self.reminders_global)
-        self.config.register_user(**self.reminders_user)
+        self.config.register_global(
+            total_sent=0,
+            maximum_user_reminders=20,  # (except bot owners)
+            me_too=True,
+            repeat_allowed=True,
+            minimum_repeat=60 * 1,  # minutes, so 1 hour | (except bot owners)
+            fifo_allowed=False,
+            creation_view=True,
+            snooze_view=True,
+            seconds_allowed=True,
+        )
+        self.config.register_user(
+            timezone=None,
+            reminders={},
+        )
 
         self.cache: typing.Dict[int, typing.Dict[int, Reminder]] = {}
 
@@ -187,7 +186,7 @@ class Reminders(Cog):
         user_id: int,
     ) -> None:
         """Delete all user reminders."""
-        if requester not in ["discord_deleted_user", "owner", "user", "user_strict"]:
+        if requester not in ("discord_deleted_user", "owner", "user", "user_strict"):
             return
         try:
             del self.cache[user_id]
@@ -234,7 +233,7 @@ class Reminders(Cog):
                     try:
                         await reminder.process(utc_now=utc_now)
                     except RuntimeError as e:
-                        self.log.error(str(e), exc_info=e)
+                        self.logger.error(str(e), exc_info=e)
         return executed
 
     async def create_reminder(
@@ -282,7 +281,7 @@ class Reminders(Cog):
         """Create a reminder with optional reminder text or message.
 
         The specified time can be fuzzy parsed or use the kwargs `in`, `on` and `every` to find a repeat rule and your text.
-        You don't have to put quotes around the time argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
+        You don't have to put quotes around the `time` argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
         Use `[p]reminder timetips` to display tips for time parsing.
 
         **Examples:**
@@ -315,6 +314,12 @@ class Reminders(Cog):
                     )
                 except commands.BadArgument:
                     pass
+                else:
+                    member_permissions = message_or_text.channel.permissions_for(ctx.author)
+                    if ctx.author.id not in ctx.bot.owner_ids and (not member_permissions.view_channel or not member_permissions.read_message_history):
+                        raise commands.UserFeedbackCheckFailure(
+                            _("You can't access this message.")
+                        )
             else:
                 utc_now, expires_at, repeat = await TimeConverter().convert(ctx, argument=time)
         except commands.BadArgument as e:
@@ -344,7 +349,9 @@ class Reminders(Cog):
         message_or_text = message_or_text or (
             ctx.message.reference.cached_message if ctx.message.reference is not None else None
         )
-        if isinstance(message_or_text, discord.Message):
+        if message_or_text is None:
+            raise commands.UserFeedbackCheckFailure(_("You must provide a message or a text."))
+        elif isinstance(message_or_text, discord.Message):
             content = {
                 "type": "message",
                 "text": (
@@ -418,7 +425,7 @@ class Reminders(Cog):
         """Create a reminder with optional reminder text or message, in a channel with an user/role ping.
 
         The specified time can be fuzzy parsed or use the kwargs `in`, `on` and `every` to find a repeat rule and your text.
-        You don't have to put quotes around the time argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
+        You don't have to put quotes around the `time` argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
         Use `[p]reminder timetips` to display tips for time parsing.
 
         Examples:
@@ -445,6 +452,12 @@ class Reminders(Cog):
                     )
                 except commands.BadArgument:
                     pass
+                else:
+                    member_permissions = message_or_text.channel.permissions_for(ctx.author)
+                    if ctx.author.id not in ctx.bot.owner_ids and (not member_permissions.view_channel or not member_permissions.read_message_history):
+                        raise commands.UserFeedbackCheckFailure(
+                            _("You can't access this message.")
+                        )
             else:
                 utc_now, expires_at, repeat = await TimeConverter().convert(ctx, argument=time)
         except commands.BadArgument as e:
@@ -521,7 +534,9 @@ class Reminders(Cog):
         message_or_text = message_or_text or (
             ctx.message.reference.cached_message if ctx.message.reference is not None else None
         )
-        if isinstance(message_or_text, discord.Message):
+        if message_or_text is None:
+            raise commands.UserFeedbackCheckFailure(_("You must provide a message or a text."))
+        elif isinstance(message_or_text, discord.Message):
             content = {
                 "type": "message",
                 "text": (
@@ -555,7 +570,7 @@ class Reminders(Cog):
             }
         if not content["files"]:
             del content["files"]
-            
+
         reminder = await self.create_reminder(
             user_id=ctx.author.id,
             content=content,
@@ -605,7 +620,7 @@ class Reminders(Cog):
         """Create a FIFO/command reminder. The chosen command will be executed with you as invoker. Don't provide the prefix.
 
         The specified time can be fuzzy parsed or use the kwargs `in`, `on` and `every` to find a repeat rule and your text.
-        You don't have to put quotes around the time argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
+        You don't have to put quotes around the `time` argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
         Use `[p]reminder timetips` to display tips for time parsing.
 
         Examples:
@@ -674,7 +689,7 @@ class Reminders(Cog):
             raise commands.UserFeedbackCheckFailure(
                 _("You can't execute this command, in this context.")
             )
-        elif context.command.qualified_name in ["shutdown", "restart", "load", "unload", "reload"]:
+        elif context.command.qualified_name in ("shutdown", "restart", "load", "unload", "reload"):
             raise commands.UserFeedbackCheckFailure(
                 _(
                     "The command `{command.qualified_name}` can't be scheduled, because it's a suspicious command."
@@ -722,7 +737,7 @@ class Reminders(Cog):
         """Create a reminder who will say/send text.
 
         The specified time can be fuzzy parsed or use the kwargs `in`, `on` and `every` to find a repeat rule and your text.
-        You don't have to put quotes around the time argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
+        You don't have to put quotes around the `time` argument. For more precise parsing, you can place quotation marks around the text. Put quotation marks around the time too, if it contains spaces.
         Use `[p]reminder timetips` to display tips for time parsing.
 
         Examples:
@@ -867,6 +882,7 @@ class Reminders(Cog):
         await self.config.user(ctx.author).timezone.set(timezone)
         await ctx.send(_("Your timezone has been set to `{timezone}`.").format(timezone=timezone))
 
+    @commands.bot_has_permissions(embed_links=True)
     @reminder.command()
     async def list(
         self,
@@ -951,6 +967,7 @@ class Reminders(Cog):
                 )
             )
 
+    @commands.bot_has_permissions(embed_links=True)
     @reminder.command(aliases=["info", "show"])
     async def edit(self, ctx: commands.Context, reminder: ExistingReminderConverter) -> None:
         """Edit an existing Reminder from its ID.
@@ -1077,6 +1094,7 @@ class Reminders(Cog):
             )
         )
 
+    @commands.bot_has_permissions(embed_links=True)
     @reminder.command()
     async def clear(self, ctx: commands.Context, confirmation: bool = False) -> None:
         """Clear all your existing reminders."""
@@ -1098,6 +1116,63 @@ class Reminders(Cog):
         except KeyError:
             pass
         await ctx.send(_("All your reminders have been successfully removed."))
+
+    @commands.bot_has_permissions(embed_links=True)
+    @reminder.command(aliases=["timestamp"])
+    async def timestamps(self, ctx: commands.Context, repeat_times: typing.Optional[int] = 100, *, time: str = "now") -> None:
+        """Get a list of Discord timestamps for a given time. You can provide a repeat.
+
+        The specified time can be fuzzy parsed or use the kwargs `in`, `on` and `every` to find a repeat rule.
+        You don't have to put quotes around the `time` argument.
+        Use `[p]reminder timetips` to display tips for time parsing.
+        """
+        try:
+            __, time, repeat = await TimeConverter().convert(ctx, time)
+        except commands.BadArgument as e:
+            raise commands.UserFeedbackCheckFailure(str(e))
+        timezone = await self.config.user(ctx.author).timezone() or "UTC"
+        embeds = []
+        for __ in range(repeat_times):
+            embed: discord.Embed = discord.Embed(
+                title=_("Timestamps for {time}").format(time=discord.utils.format_dt(time, "F")),
+                color=await ctx.embed_color()
+            )
+            embed.description = "\n".join(
+                [
+                    f"`{discord.utils.format_dt(time, style)}`: {discord.utils.format_dt(time, style)}"
+                    for style in ("R", "d", "D", "t", "T", "f", "F")
+                ]
+            )
+            embeds.append(embed)
+            if repeat is None or (time := await repeat.next_trigger(last_expires_at=time, utc_now=time, timezone=timezone)) is None:
+                break
+        await Menu(pages=embeds).start(ctx)
+
+    @commands.Cog.listener()
+    async def on_message_without_command(self, message: discord.Message):
+        if await self.bot.cog_disabled_in_guild(
+            cog=self, guild=message.guild
+        ) or not await self.bot.allowed_by_whitelist_blacklist(who=message.author):
+            return
+        if message.webhook_id is not None or message.author.bot:
+            return
+        context = await self.bot.get_context(message)
+        if context.prefix is None:
+            return
+        command = context.message.content[len(str(context.prefix)) :]
+        if len(command.split(" ")) == 0:
+            return
+        command_name = command.split(" ")[0]
+        if command_name not in ("timestamps", "timestamp"):
+            return
+        await CogsUtils.invoke_command(
+            bot=self.bot,
+            author=context.author,
+            channel=context.channel,
+            command=f"reminder {command}",
+            prefix=context.prefix,
+            message=context.message,
+        )
 
     # async def _cogsutils_add_hybrid_commands(
     #     self, command: typing.Union[commands.HybridCommand, commands.HybridGroup]
@@ -1350,7 +1425,7 @@ class Reminders(Cog):
             [
                 reminder
                 for reminder in reminders.values()
-                if reminder.content["type"] in ["text", "message"]
+                if reminder.content["type"] in ("text", "message")
             ],
             key=lambda reminder: reminder.next_expires_at,
         )[:5]

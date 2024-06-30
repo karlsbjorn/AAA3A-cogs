@@ -47,15 +47,7 @@ class GistsHandler(Cog):
             try:
                 await self.gists_client.authorize(token)
             except gists.AuthorizationFailure as e:
-                self.log.error("The GitHub token is invalid.", exc_info=e)
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
+                self.logger.error("The GitHub token is invalid.", exc_info=e)
 
     @commands.Cog.listener()
     async def on_red_api_tokens_update(
@@ -68,7 +60,7 @@ class GistsHandler(Cog):
         try:
             await self.gists_client.authorize(token)
         except gists.AuthorizationFailure as e:
-            self.log.error("The GitHub token is invalid.", exc_info=e)
+            self.logger.error("The GitHub token is invalid.", exc_info=e)
 
     @commands.is_owner()
     @commands.bot_has_permissions(embed_links=True)

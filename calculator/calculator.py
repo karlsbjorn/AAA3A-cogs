@@ -36,14 +36,13 @@ class Calculator(Cog):
             identifier=205192943327321000143939875896557571750,  # 905683670375
             force_registration=True,
         )
-        self.calculator_global: typing.Dict[str, typing.Dict[str, typing.Union[int, str]]] = {
-            "settings": {
+        self.config.register_global(
+            settings={
                 "time_max": 180,
                 "color": 0x01D758,
                 "thumbnail": "https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_960_720.png",
-            },
-        }
-        self.config.register_global(**self.calculator_global)
+            }
+        )
 
         # blocks: typing.List[block.Block] = [
         #     block.MathBlock(),
@@ -67,14 +66,6 @@ class Calculator(Cog):
         ] = {}
 
         self.cache: typing.List[discord.Message] = []
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def calculate(self, expression: str) -> str:
         lst = list(expression)
@@ -104,7 +95,29 @@ class Calculator(Cog):
             "τ": tau,
             "k": 1_000,
         }
-        suffixes = ["k", "m", "b", "t", "q", "Q", "s", "S", "o", "n", "d", "U", "D", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Vi"]  # ["k", "M", "B", "T", "P", "E", "Z", "Y"]
+        suffixes = [
+            "k",
+            "m",
+            "b",
+            "t",
+            "q",
+            "Q",
+            "s",
+            "S",
+            "o",
+            "n",
+            "d",
+            "U",
+            "D",
+            "T",
+            "Qa",
+            "Qi",
+            "Sx",
+            "Sp",
+            "Oc",
+            "No",
+            "Vi",
+        ]  # ["k", "M", "B", "T", "P", "E", "Z", "Y"]
         number = 1000
         for suffix in suffixes:
             constants[suffix] = number
@@ -221,8 +234,35 @@ class Calculator(Cog):
             return
         if message.webhook_id is not None or message.author.bot:
             return
-        content_to_check = message.content.split("#")[0].replace(" ", "").lstrip("+-").strip() 
-        if not content_to_check or content_to_check.isdecimal() or content_to_check in ["k", "m", "b", "t", "q", "Q", "s", "S", "o", "n", "d", "U", "D", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Vi"]:
+        content_to_check = message.content.split("#")[0].replace(" ", "").lstrip("+-").strip()
+        if (
+            not content_to_check
+            or content_to_check.isdecimal()
+            or content_to_check
+            in (
+                "k",
+                "m",
+                "b",
+                "t",
+                "q",
+                "Q",
+                "s",
+                "S",
+                "o",
+                "n",
+                "d",
+                "U",
+                "D",
+                "T",
+                "Qa",
+                "Qi",
+                "Sx",
+                "Sp",
+                "Oc",
+                "No",
+                "Vi",
+            )
+        ):
             return
         fake_context = await CogsUtils.invoke_command(
             bot=self.bot,

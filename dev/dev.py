@@ -1,7 +1,7 @@
 ﻿from AAA3A_utils import Cog, Menu, Settings, CogsUtils  # isort:skip
 from redbot.core import commands, Config  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -12,19 +12,20 @@ import contextlib
 import io
 import random
 import re
+import subprocess
 import sys
 import textwrap
 
 import aiohttp
 import rich
-import subprocess
 from pygments.styles import get_style_by_name
-
 from redbot.core import dev_commands
 from redbot.core.utils.chat_formatting import box
 from redbot.core.utils.predicates import MessagePredicate
 
+from .dashboard_integration import DashboardIntegration
 from .env import DevEnv, DevSpace, Exit, ctxconsole
+from .view import cleanup_code, ExecuteView
 
 # Credits:
 # General repo credits.
@@ -44,18 +45,6 @@ TimeConverter: commands.converter.TimedeltaConverter = commands.converter.Timede
 class SolarizedCustom(get_style_by_name("solarized-dark")):
     background_color = None
     line_number_background_color = None
-
-
-def cleanup_code(code: str) -> str:
-    code = dev_commands.cleanup_code(textwrap.dedent(code)).strip()
-    with io.StringIO(code) as codeio:
-        for line in codeio:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                break
-        else:
-            return "pass"
-    return code
 
 
 @contextlib.contextmanager
@@ -114,9 +103,11 @@ class DevOutput(dev_commands.DevOutput):
                 ):
                     if output_mode == "str":
                         result = str(self.result)
-                    elif isinstance(self.result, collections.abc.Iterable) and not (
-                        output_mode == "repr" and isinstance(self.result, str)
-                    ) or hasattr(self.result, "__dataclass_fields__"):
+                    elif (
+                        isinstance(self.result, collections.abc.Iterable)
+                        and not (output_mode == "repr" and isinstance(self.result, str))
+                        or hasattr(self.result, "__dataclass_fields__")
+                    ):
                         result = self.result
                     else:
                         result = repr(self.result)
@@ -152,7 +143,10 @@ class DevOutput(dev_commands.DevOutput):
                     if isinstance(x, discord.Embed) and channel_permissions.embed_links:
                         if "embeds" not in kwargs:
                             kwargs["embeds"] = []
-                        if len(kwargs["embeds"]) < 10 and (sum(len(embed) for embed in kwargs["embeds"]) + len(x)) <= 6000:
+                        if (
+                            len(kwargs["embeds"]) < 10
+                            and (sum(len(embed) for embed in kwargs["embeds"]) + len(x)) <= 6000
+                        ):
                             kwargs["embeds"].append(x)
                     elif isinstance(x, discord.File) and channel_permissions.attach_files:
                         if "files" not in kwargs:
@@ -168,13 +162,39 @@ class DevOutput(dev_commands.DevOutput):
                 except discord.HTTPException:
                     pass
         if tick and self.exc is not None:
-            await self.ctx.react_quietly(reaction="❗" if isinstance(self.exc, SyntaxError) else ("⏰" if isinstance(self.exc, (TimeoutError, asyncio.TimeoutError, aiohttp.ClientTimeout, aiohttp.ServerTimeoutError, subprocess.TimeoutExpired)) else "❌"))
-        box_lang = "ini" if self.ctx.command.name == "eshell" else ("ansi" if ansi_formatting else "py")
+            await self.ctx.react_quietly(
+                reaction="❗"
+                if isinstance(self.exc, SyntaxError)
+                else (
+                    "⏰"
+                    if isinstance(
+                        self.exc,
+                        (
+                            TimeoutError,
+                            asyncio.TimeoutError,
+                            aiohttp.ClientTimeout,
+                            aiohttp.ServerTimeoutError,
+                            subprocess.TimeoutExpired,
+                        ),
+                    )
+                    else "❌"
+                )
+            )
+        box_lang = (
+            "ini" if self.ctx.command.name == "eshell" else ("ansi" if ansi_formatting else "py")
+        )
         if send_interactive:
             task = self.ctx.send_interactive(
                 [
                     box(page, lang=box_lang)
-                    for page in dev_commands.get_pages((f"{self.env['prefix_dev_output']}\n\n" if "prefix_dev_output" in self.env else None) + self.__str__(output_mode=output_mode))
+                    for page in dev_commands.get_pages(
+                        (
+                            f"{self.env['prefix_dev_output']}\n\n"
+                            if "prefix_dev_output" in self.env
+                            else None
+                        )
+                        + self.__str__(output_mode=output_mode)
+                    )
                 ],
             )
             if wait:
@@ -186,7 +206,10 @@ class DevOutput(dev_commands.DevOutput):
                 pages=pages,
                 prefix=self.env.get("prefix_dev_output"),
                 lang=box_lang,
-            ).start(self.ctx, wait=wait,)
+            ).start(
+                self.ctx,
+                wait=wait,
+            )
         if tick and self.exc is None:
             await self.ctx.react_quietly(
                 # sourcery skip: swap-if-expression
@@ -265,6 +288,7 @@ class DevOutput(dev_commands.DevOutput):
                 await self.ctx.message.add_reaction("▶")
             except discord.HTTPException:
                 pass
+
         task = asyncio.create_task(add_triangle_reaction_after_1_seconds())
 
         self.env.update({"dev_output": self})
@@ -302,6 +326,7 @@ class DevOutput(dev_commands.DevOutput):
                 await self.ctx.message.add_reaction("▶")
             except discord.HTTPException:
                 pass
+
         task = asyncio.create_task(add_triangle_reaction_after_1_seconds())
 
         self.env.update({"dev_output": self})
@@ -320,7 +345,8 @@ class DevOutput(dev_commands.DevOutput):
                 _line_text = textwrap.dedent(line_text)
                 if _line_text.startswith("yield "):
                     _raw_source[line] = textwrap.indent(
-                        f"print(repr(({_line_text[6:]})))", (len(line_text) - len(_line_text)) * " "
+                        f"print(repr(({_line_text[6:]})))",
+                        (len(line_text) - len(_line_text)) * " ",
                     )
             self.raw_source = "\n".join(_raw_source)
         except SyntaxError:
@@ -358,6 +384,7 @@ class DevOutput(dev_commands.DevOutput):
                 await self.ctx.message.add_reaction("▶")
             except discord.HTTPException:
                 pass
+
         task = asyncio.create_task(add_triangle_reaction_after_1_seconds())
 
         self.env.update({"dev_output": self})
@@ -440,16 +467,13 @@ class DevOutput(dev_commands.DevOutput):
 
 
 @cog_i18n(_)
-class Dev(Cog, dev_commands.Dev):
+class Dev(DashboardIntegration, Cog, dev_commands.Dev):
     """Various development focused utilities!"""
+
+    __authors__: typing.List[str] = ["Cog-Creators", "Zephyrkul (Zephyrkul#1089)", "AAA3A"]
 
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = [
-            "Cog-Creators",
-            "Zephyrkul (Zephyrkul#1089)",
-            "AAA3A",
-        ]
 
         self.env_extensions: typing.Dict[str, typing.Any] = {}
         self.source_cache: dev_commands.SourceCache = dev_commands.SourceCache()
@@ -483,7 +507,17 @@ class Dev(Cog, dev_commands.Dev):
             "downloader_already_agreed": False,
             "use_extended_environment": True,
         }
-        self.config.register_global(**self.dev_global)
+        self.config.register_global(
+            auto_imports=True,
+            output_mode="repr",
+            rich_tracebacks=False,
+            ansi_formatting=False,
+            send_interactive=False,
+            send_dpy_objects=True,
+            use_last_locals=True,
+            downloader_already_agreed=False,
+            use_extended_environment=True,
+        )
 
         _settings: typing.Dict[
             str, typing.Dict[str, typing.Union[typing.List[str], bool, str]]
@@ -561,14 +595,6 @@ class Dev(Cog, dev_commands.Dev):
         await self.bot.add_cog(core_dev)
         await super().cog_unload()
 
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     def get_environment(
         self, ctx: commands.Context, use_extended_environment: bool = True
     ) -> DevEnv:
@@ -587,7 +613,11 @@ class Dev(Cog, dev_commands.Dev):
             asyncio.create_task(
                 ctx.bot.wait_for("message", check=MessagePredicate.cancelled(ctx))
             ),
-            asyncio.create_task(self._my_exec(ctx, type=type, source=source, env=env, send_result=send_result, wait=wait)),
+            asyncio.create_task(
+                self._my_exec(
+                    ctx, type=type, source=source, env=env, send_result=send_result, wait=wait
+                )
+            ),
         ]
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
@@ -644,7 +674,7 @@ class Dev(Cog, dev_commands.Dev):
             try:
                 _console_custom_kwargs.update(_console_custom)
             except Exception:
-                self.log.exception(
+                self.logger.exception(
                     "Error updating console kwargs: falling back to default values."
                 )
         env["_console_custom"] = _console_custom_kwargs
@@ -719,16 +749,17 @@ class Dev(Cog, dev_commands.Dev):
                 try:
                     code = (await ctx.message.attachments[0].read()).decode(encoding="utf-8")
                 except UnicodeDecodeError:
-                    raise commands.UserFeedbackCheckFailure(_("Unreadable attachment with `utf-8`."))
+                    raise commands.UserFeedbackCheckFailure(
+                        _("Unreadable attachment with `utf-8`.")
+                    )
             elif (
-                hasattr(ctx.message, "reference")
-                and ctx.message.reference is not None
+                ctx.message.reference is not None
                 and isinstance((reference := ctx.message.reference.resolved), discord.Message)
             ):
                 if (
-                    match := re.compile(r"(debug|(jsk|jishaku) (py|python|eval|ev))(\n)?( )?(?P<code>(.|\n)*)").search(
-                        reference.content
-                    )
+                    match := re.compile(
+                        r"(debug|(jsk|jishaku) (py|python|eval|ev))(\n)?( )?(?P<code>(.|\n)*)"
+                    ).search(reference.content)
                 ) is not None and match.groupdict()["code"].strip():
                     code = match.groupdict()["code"]
                 elif (
@@ -739,7 +770,7 @@ class Dev(Cog, dev_commands.Dev):
                 else:
                     raise commands.UserFeedbackCheckFailure(_("This message isn't reachable."))
             else:
-                raise commands.UserInputError()
+                return asyncio.create_task(ExecuteView(cog=self).start(ctx))
         source = cleanup_code(code)
         await self.my_exec(
             getattr(ctx, "original_context", ctx),
@@ -781,16 +812,17 @@ class Dev(Cog, dev_commands.Dev):
                 try:
                     body = (await ctx.message.attachments[0].read()).decode(encoding="utf-8")
                 except UnicodeDecodeError:
-                    raise commands.UserFeedbackCheckFailure(_("Unreadable attachment with `utf-8`."))
+                    raise commands.UserFeedbackCheckFailure(
+                        _("Unreadable attachment with `utf-8`.")
+                    )
             elif (
-                hasattr(ctx.message, "reference")
-                and ctx.message.reference is not None
+                ctx.message.reference is not None
                 and isinstance((reference := ctx.message.reference.resolved), discord.Message)
             ):
                 if (
-                    match := re.compile(r"(eval|ev|e|(jsk|jishaku) (py|python|eval|ev)|(runcode|executecode) (py|python))(\n)?( )?(?P<body>(.|\n)*)").search(
-                        reference.content
-                    )
+                    match := re.compile(
+                        r"(eval|ev|e|(jsk|jishaku) (py|python|eval|ev)|(runcode|executecode) (py|python))(\n)?( )?(?P<body>(.|\n)*)"
+                    ).search(reference.content)
                 ) is not None and match.groupdict()["body"].strip():
                     body = match.groupdict()["body"]
                 elif (
@@ -801,7 +833,7 @@ class Dev(Cog, dev_commands.Dev):
                 else:
                     raise commands.UserInputError()
             else:
-                raise commands.UserInputError()
+                return asyncio.create_task(ExecuteView(cog=self).start(ctx))
         source = cleanup_code(body)
         await self.my_exec(
             getattr(ctx, "original_context", ctx),
@@ -888,7 +920,6 @@ class Dev(Cog, dev_commands.Dev):
                     source=source,
                     env=env,
                     wait=False,
-                    
                     send_result=True,
                 )
             except Exit:
@@ -974,8 +1005,10 @@ class Dev(Cog, dev_commands.Dev):
 
     @commands.is_owner()
     @commands.hybrid_command(name="eshell")
-    async def _eshell(self, ctx: commands.Context, silent: typing.Optional[bool] = False, *, command: str = None) -> None:
-        """Execute shell commands.
+    async def _eshell(
+        self, ctx: commands.Context, silent: typing.Optional[bool] = False, *, command: str = None
+    ) -> None:
+        """Execute Shell commands.
 
         This command wraps the shell command into a Python code to invoke them.
 
@@ -987,16 +1020,17 @@ class Dev(Cog, dev_commands.Dev):
                 try:
                     command = (await ctx.message.attachments[0].read()).decode(encoding="utf-8")
                 except UnicodeDecodeError:
-                    raise commands.UserFeedbackCheckFailure(_("Unreadable attachment with `utf-8`."))
+                    raise commands.UserFeedbackCheckFailure(
+                        _("Unreadable attachment with `utf-8`.")
+                    )
             elif (
-                hasattr(ctx.message, "reference")
-                and ctx.message.reference is not None
+                ctx.message.reference is not None
                 and isinstance((reference := ctx.message.reference.resolved), discord.Message)
             ):
                 if (
-                    match := re.compile(r"(eshell|shell|qshell)(\n)?( )?(?P<command>(.|\n)*)").search(
-                        reference.content
-                    )
+                    match := re.compile(
+                        r"(eshell|shell|qshell)(\n)?( )?(?P<command>(.|\n)*)"
+                    ).search(reference.content)
                 ) is not None and match.groupdict()["command"].strip():
                     command = match.groupdict()["command"]
                 elif (
@@ -1011,47 +1045,52 @@ class Dev(Cog, dev_commands.Dev):
         command = cleanup_code(command)
 
         # Thanks Jack for a part of this code!
-        source = cleanup_code("""
-            import asyncio
-            import asyncio.subprocess as asp
-            import os
-            import sys
-            import typing
-            command = '''
-            [COMMAND]
-            '''.strip()
-            # devenv["prefix_dev_output"] = command
+        source = (
+            cleanup_code(
+                """
+                import asyncio
+                import asyncio.subprocess as asp
+                import os
+                import sys
+                import typing
 
-            def get_env() -> typing.Dict[str, str]:
-                env = os.environ.copy()
-                if hasattr(sys, "real_prefix") or sys.base_prefix != sys.prefix:
-                    if sys.platform == "win32":
-                        binfolder = f"{sys.prefix}{os.path.sep}Scripts"
-                        env["PATH"] = f"{binfolder}{os.pathsep}{env['PATH']}"
-                    else:
-                        binfolder = f"{sys.prefix}{os.path.sep}bin"
-                        env["PATH"] = f"{binfolder}{os.pathsep}{env['PATH']}"
-                return env
+                command = '''
+                COMMAND
+                '''.strip()
 
-            process = await asp.create_subprocess_shell(
-                command,
-                stdout=asp.PIPE,
-                stderr=asp.STDOUT,
-                env=get_env(),
-                executable=None,
+                def get_env() -> typing.Dict[str, str]:
+                    env = os.environ.copy()
+                    if hasattr(sys, "real_prefix") or sys.base_prefix != sys.prefix:
+                        if sys.platform == "win32":
+                            binfolder = f"{sys.prefix}{os.path.sep}Scripts"
+                            env["PATH"] = f"{binfolder}{os.pathsep}{env['PATH']}"
+                        else:
+                            binfolder = f"{sys.prefix}{os.path.sep}bin"
+                            env["PATH"] = f"{binfolder}{os.pathsep}{env['PATH']}"
+                    return env
+
+                process = await asp.create_subprocess_shell(
+                    command,
+                    stdout=asp.PIPE,
+                    stderr=asp.STDOUT,
+                    env=get_env(),
+                    executable=None,
+                )
+                try:
+                    await process.wait()
+                except asyncio.CancelledError:
+                    prefix = f"Command was terminated early and this is a partial output:\\n\\n"
+                    # raise
+                else:
+                    prefix = ""
+                finally:
+                    lines = [line async for line in process.stdout]
+                    print(prefix + b"".join(lines).decode("utf-8", "replace").strip().replace("\\r", ""))
+                """
             )
-            try:
-                await process.wait()
-            except asyncio.CancelledError:
-                prefix = f"Command was terminated early and this is a partial output:\\n\\n"
-                # raise
-            else:
-                prefix = ""
-
-            finally:
-                lines = [line async for line in process.stdout]
-                print(prefix + b"".join(lines).decode("utf-8", "replace").strip().replace("\\r", ""))
-        """).strip().replace("[COMMAND]", command)
+            .strip()
+            .replace("COMMAND", command)
+        )
         if silent:
             source = "\n".join(source.split("\n")[:-3])
 
@@ -1059,6 +1098,7 @@ class Dev(Cog, dev_commands.Dev):
             getattr(ctx, "original_context", ctx),
             type="eval",
             source=source,
+            send_result=True,
         )
 
     @commands.is_owner()

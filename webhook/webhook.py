@@ -1,14 +1,14 @@
 from AAA3A_utils import Cog, CogsUtils, Menu  # isort:skip
 from redbot.core import commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
 import re
 
-from redbot.core.utils.tunnel import Tunnel
 from redbot.core.utils.chat_formatting import box, humanize_list, pagify
+from redbot.core.utils.tunnel import Tunnel
 
 # Credits:
 # General repo credits.
@@ -30,17 +30,27 @@ class WebhookLinkConverter(commands.Converter):
 
 
 class Session:
-    def __init__(self, cog: commands.Cog, author: discord.Member, channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread], webhook: discord.Webhook) -> None:
+    def __init__(
+        self,
+        cog: commands.Cog,
+        author: discord.Member,
+        channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread],
+        webhook: discord.Webhook,
+    ) -> None:
         self.cog: commands.Cog = cog
         self.author: discord.Member = author
 
-        self.channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread] = channel
+        self.channel: typing.Union[
+            discord.TextChannel, discord.VoiceChannel, discord.Thread
+        ] = channel
         self.webhook: discord.Webhook = webhook
 
     async def initialize(self, ctx: commands.Context):
         embed: discord.Embed = discord.Embed(
             title=_("Webhook Session Initiated"),
-            description=_("Session Created by {author.display_name} ({author.id}).").format(author=self.author),
+            description=_("Session Created by {author.display_name} ({author.id}).").format(
+                author=self.author
+            ),
             color=await ctx.embed_color(),
         )
         try:
@@ -51,14 +61,14 @@ class Session:
             )
         except (ValueError, discord.HTTPException):
             raise commands.UserFeedbackCheckFailure(
-                _(
-                    "Session initialization failed as provided webhook link was invalid."
-                )
+                _("Session initialization failed as provided webhook link was invalid.")
             )
         else:
             self.cog.webhook_sessions[self.channel.id] = self
             await self.channel_send(
-                _("I will send all messages in this channel to the webhook until the session is closed with `{ctx.clean_prefix}webhook session close` or there are 2 minutes of inactivity.").format(ctx=ctx),
+                _(
+                    "I will send all messages in this channel to the webhook until the session is closed with `{ctx.clean_prefix}webhook session close` or there are 2 minutes of inactivity."
+                ).format(ctx=ctx),
                 embed=embed,
             )
 
@@ -68,7 +78,9 @@ class Session:
         except (ValueError, discord.HTTPException):
             await self.close()
 
-    async def channel_send(self, content: str = None, **kwargs) -> typing.Optional[discord.Message]:
+    async def channel_send(
+        self, content: str = None, **kwargs
+    ) -> typing.Optional[discord.Message]:
         if self.channel.permissions_for(self.channel.guild.me).send_messages:
             return await self.channel.send(content, **kwargs)
 
@@ -84,9 +96,10 @@ class Session:
 class Webhook(Cog):
     """Various webhook commands to create and send messages along webhooks!"""
 
+    __authors__: typing.List[str] = ["PhenoM4n4n", "AAA3A"]
+
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["PhenoM4n4n", "AAA3A"]
 
         self.links_cache: typing.Dict[int, discord.Webhook] = {}
         self.webhook_sessions: typing.Dict[int, Session] = {}
@@ -106,7 +119,9 @@ class Webhook(Cog):
                 raise ValueError(_("That doesn't look like a webhook link."))
             webhook_id = int(match.group("id"))
             if not (webhook := self.links_cache.get(webhook_id)):
-                webhook = discord.Webhook.from_url(match.group(0), session=self.bot.http._HTTPClient__session)
+                webhook = discord.Webhook.from_url(
+                    match.group(0), session=self.bot.http._HTTPClient__session
+                )
                 self.links_cache[webhook.id] = webhook
             return webhook
 
@@ -118,12 +133,16 @@ class Webhook(Cog):
             color=await ctx.embed_color(),
         )
         embed.set_footer(
-            text=_("Use `{ctx.prefix}help {ctx.command.qualified_name}` to see an example.").format(ctx=ctx)
+            text=_(
+                "Use `{ctx.prefix}help {ctx.command.qualified_name}` to see an example."
+            ).format(ctx=ctx)
         )
         await Menu(pages=[embed]).start(ctx)
 
     async def check_channel(
-        self, ctx: commands.Context, channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]
+        self,
+        ctx: commands.Context,
+        channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread],
     ) -> bool:
         # if (
         #     not channel.permissions_for(ctx.author).manage_webhooks
@@ -192,7 +211,9 @@ class Webhook(Cog):
     async def webhook_say(
         self,
         ctx: commands.Context,
-        channel: typing.Optional[typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]],
+        channel: typing.Optional[
+            typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]
+        ],
         *,
         message: commands.Range[str, 1, 2000] = None,
     ) -> None:
@@ -206,7 +227,9 @@ class Webhook(Cog):
         if not message and not files:
             raise commands.UserInputError()
         try:
-            hook = await CogsUtils.get_hook(bot=ctx.bot, channel=getattr(channel, "parent", channel))
+            hook = await CogsUtils.get_hook(
+                bot=ctx.bot, channel=getattr(channel, "parent", channel)
+            )
             await hook.send(
                 content=message,
                 files=files,
@@ -221,7 +244,9 @@ class Webhook(Cog):
     async def webhook_sudo(
         self,
         ctx: commands.Context,
-        channel: typing.Optional[typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]],
+        channel: typing.Optional[
+            typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]
+        ],
         member: discord.Member,
         *,
         message: commands.Range[str, 1, 2000] = None,
@@ -236,7 +261,9 @@ class Webhook(Cog):
         if not message and not files:
             raise commands.UserInputError()
         try:
-            hook = await CogsUtils.get_hook(bot=ctx.bot, channel=getattr(channel, "parent", channel))
+            hook = await CogsUtils.get_hook(
+                bot=ctx.bot, channel=getattr(channel, "parent", channel)
+            )
             await hook.send(
                 content=message,
                 files=files,
@@ -251,7 +278,9 @@ class Webhook(Cog):
     async def webhook_custom(
         self,
         ctx: commands.Context,
-        channel: typing.Optional[typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]],
+        channel: typing.Optional[
+            typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]
+        ],
         username: commands.Range[str, 1, 80],
         avatar_url: str,
         *,
@@ -267,7 +296,9 @@ class Webhook(Cog):
         if not message and not files:
             raise commands.UserInputError()
         try:
-            hook = await CogsUtils.get_hook(bot=ctx.bot, channel=getattr(channel, "parent", channel))
+            hook = await CogsUtils.get_hook(
+                bot=ctx.bot, channel=getattr(channel, "parent", channel)
+            )
             await hook.send(
                 content=message,
                 files=files,
@@ -283,7 +314,9 @@ class Webhook(Cog):
     async def webhook_clyde(
         self,
         ctx: commands.Context,
-        channel: typing.Optional[typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]],
+        channel: typing.Optional[
+            typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]
+        ],
         *,
         message: commands.Range[str, 1, 2000] = None,
     ) -> None:
@@ -297,7 +330,9 @@ class Webhook(Cog):
         if not message and not files:
             raise commands.UserInputError()
         try:
-            hook = await CogsUtils.get_hook(bot=ctx.bot, channel=getattr(channel, "parent", channel))
+            hook = await CogsUtils.get_hook(
+                bot=ctx.bot, channel=getattr(channel, "parent", channel)
+            )
             await hook.send(
                 content=message,
                 files=files,
@@ -350,7 +385,9 @@ class Webhook(Cog):
 
     @commands.admin_or_permissions(manage_webhooks=True)
     @webhook.command(name="edit")
-    async def webhook_edit(self, ctx: commands.Context, message: discord.Message, *, content: str = None) -> None:
+    async def webhook_edit(
+        self, ctx: commands.Context, message: discord.Message, *, content: str = None
+    ) -> None:
         """Edit a message sent by a webhook.
 
         You can attach files to the command.
@@ -424,7 +461,9 @@ class Webhook(Cog):
         """Initiate a session within this channel sending messages to a specified webhook link."""
         if ctx.channel.id in self.webhook_sessions:
             return await ctx.send(
-                _("This channel already has an ongoing session. Use `{ctx.clean_prefix}webhook session close` to close it.").format(ctx=ctx)
+                _(
+                    "This channel already has an ongoing session. Use `{ctx.clean_prefix}webhook session close` to close it."
+                ).format(ctx=ctx)
             )
         session = Session(cog=self, author=ctx.author, channel=ctx.channel, webhook=webhook_link)
         await session.initialize(ctx)
@@ -437,7 +476,9 @@ class Webhook(Cog):
         channel = channel or ctx.channel
         if (session := self.webhook_sessions.get(channel.id)) is None:
             raise commands.UserFeedbackCheckFailure(
-                _("This channel does not have an ongoing webhook session. Start one with `{ctx.clean_prefix}webhook session`.").format(ctx=ctx)
+                _(
+                    "This channel does not have an ongoing webhook session. Start one with `{ctx.clean_prefix}webhook session`."
+                ).format(ctx=ctx)
             )
         await session.close()
 

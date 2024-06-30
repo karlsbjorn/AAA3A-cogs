@@ -23,48 +23,35 @@ _ = Translator("Seen", __file__)
 class Seen(Cog):
     """A cog to check when a member/role/channel/category/user/guild was last active!"""
 
+    __authors__: typing.List[str] = ["AAA3A", "aikaterna"]
+
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["AAA3A", "aikaterna"]
 
         self.config: Config = Config.get_conf(
             self,
             identifier=205192943327321000143939875896557571750,  # 864398642893
             force_registration=True,
         )
-        self.global_config: typing.Dict[
-            str,
-            typing.Union[
-                typing.Dict[
-                    str,
-                    typing.Union[
-                        typing.Dict[str, typing.Dict[str, typing.Union[int, str]]],
-                        typing.Dict[str, str],
-                        typing.Dict[str, bool],
-                    ],
-                ],
-                typing.List[int],
-            ],
-        ] = {
-            "message": {},
-            "message_edit": {},
-            "reaction_add": {},
-            "reaction_remove": {},
-            "ignored_users": [345628097929936898],  # MAX
-            "listeners": {
+        self.config.register_global(
+            message={},
+            message_edit={},
+            reaction_add={},
+            reaction_remove={},
+            ignored_users=[],
+            listeners={
                 "message": True,
                 "message_edit": True,
                 "reaction_add": True,
                 "reaction_remove": True,
             },
-        }
+        )
         self.default_config: typing.Dict[str, typing.Optional[str]] = {
             "message": None,
             "message_edit": None,
             "reaction_add": None,
             "reaction_remove": None,
         }
-        self.config.register_global(**self.global_config)
         self.config.register_user(**self.default_config)
         self.config.register_member(**self.default_config)
         self.config.register_role(**self.default_config)
@@ -131,7 +118,7 @@ class Seen(Cog):
         user_id: int,
     ) -> None:
         """Delete all Seen data for user, members, roles, channels, categories, guilds; if the user ID matches."""
-        if requester not in ["discord_deleted_user", "owner", "user", "user_strict"]:
+        if requester not in ("discord_deleted_user", "owner", "user", "user_strict"):
             return
         await self.save_to_config()  # To clean up the cache too.
         global_data = await self.config.all()
@@ -633,8 +620,7 @@ class Seen(Cog):
             message.author.id == message.guild.me.id
             and len(message.embeds) == 1
             and (
-                "Seen".lower()
-                in message.embeds[0].to_dict().get("description", "").lower()
+                "Seen".lower() in message.embeds[0].to_dict().get("description", "").lower()
                 or "Seen".lower() in message.embeds[0].to_dict().get("title", "").lower()
             )
         ):
@@ -675,8 +661,7 @@ class Seen(Cog):
             after.author.id == after.guild.me.id
             and len(after.embeds) == 1
             and (
-                "Seen".lower()
-                in after.embeds[0].to_dict().get("description", "").lower()
+                "Seen".lower() in after.embeds[0].to_dict().get("description", "").lower()
                 or "Seen".lower() in after.embeds[0].to_dict().get("title", "").lower()
             )
         ):
@@ -815,10 +800,10 @@ class Seen(Cog):
         if _type is not None:
             custom_ids = [
                 custom_id
-                for custom_id in [
+                for custom_id in (
                     all_data_config.get(_type, None),
                     all_data_cache.get(_type, None),
-                ]
+                )
                 if custom_id is not None
             ]
             if not custom_ids:
@@ -835,12 +820,12 @@ class Seen(Cog):
         else:
             all_data_config = {
                 x: all_data_config[x]
-                for x in ["message", "message_edit", "reaction_add", "reaction_remove"]
+                for x in ("message", "message_edit", "reaction_add", "reaction_remove")
                 if all_data_config[x] is not None
             }
             all_data_cache = {
                 x: all_data_cache.get(x, None)
-                for x in ["message", "message_edit", "reaction_add", "reaction_remove"]
+                for x in ("message", "message_edit", "reaction_add", "reaction_remove")
                 if all_data_cache.get(x, None) is not None
             }
             all_data_config = [
@@ -1433,7 +1418,7 @@ class Seen(Cog):
 
         `bots` is a parameter for `members` and `users`. `include_role` and `exclude_role` are parameters for only `members`.
         """
-        if _object in ["guilds", "users"] and ctx.author.id not in ctx.bot.owner_ids:
+        if _object in ("guilds", "users") and ctx.author.id not in ctx.bot.owner_ids:
             raise commands.UserFeedbackCheckFailure(
                 _("You're not allowed to view the Seen board for guilds and users.")
             )

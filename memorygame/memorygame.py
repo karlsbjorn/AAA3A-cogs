@@ -1,7 +1,7 @@
 ﻿from AAA3A_utils import Cog, CogsUtils, Menu, Settings  # isort:skip
 from redbot.core import commands, Config  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -23,7 +23,7 @@ _ = Translator("MemoryGame", __file__)
 
 
 @cog_i18n(_)
-class MemoryGame(Cog, DashboardIntegration):
+class MemoryGame(DashboardIntegration, Cog):
     """A cog to play to Memory game, with buttons, leaderboard and Red bank!"""
 
     def __init__(self, bot: Red) -> None:
@@ -34,20 +34,18 @@ class MemoryGame(Cog, DashboardIntegration):
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.memorygame_guild: typing.Dict[str, typing.Union[typing.Optional[int], bool]] = {
-            "max_wrong_matches": None,
-            "red_economy": False,
-            "max_prize": 5000,
-            "reduction_per_second": 5,
-            "reduction_per_wrong_match": 15,
-        }
-        self.memorygame_member: typing.Dict[str, int] = {
-            "score": 0,
-            "wins": 0,
-            "games": 0,
-        }
-        self.config.register_guild(**self.memorygame_guild)
-        self.config.register_member(**self.memorygame_member)
+        self.config.register_guild(
+            max_wrong_matches=None,
+            red_economy=False,
+            max_prize=5000,
+            reduction_per_second=5,
+            reduction_per_wrong_match=15,
+        )
+        self.config.register_member(
+            score=0,
+            wins=0,
+            games=0,
+        )
 
         _settings: typing.Dict[
             str, typing.Dict[str, typing.Union[typing.List[str], bool, str]]
@@ -96,7 +94,7 @@ class MemoryGame(Cog, DashboardIntegration):
         user_id: int,
     ) -> None:
         """Delete all user's levels/xp in each guild."""
-        if requester not in ["discord_deleted_user", "owner", "user", "user_strict"]:
+        if requester not in ("discord_deleted_user", "owner", "user", "user_strict"):
             return
         guild_group = self.config._get_base_group(self.config.GUILD)
         async with guild_group.all() as guilds_data:

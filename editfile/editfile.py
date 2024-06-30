@@ -31,17 +31,6 @@ class EditFile(Cog):
     ⚠️ This cog can be very dangerous, since it allows direct read/write/delete of files on the bot’s machine, considering the fact that reading the wrong file can expose sensitive information like tokens and deleting the wrong file can corrupt the bot or the system entirely.
     """
 
-    def __init__(self, bot: Red) -> None:
-        super().__init__(bot=bot)
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     @commands.is_owner()
     @commands.hybrid_group(aliases=["fileedit"])
     async def editfile(self, ctx: commands.Context) -> None:
@@ -265,18 +254,22 @@ class EditFile(Cog):
             raise commands.UserFeedbackCheckFailure(
                 _("The path you specified refers to a file, not a directory.")
             )
+
         def tree(base):
             lines = []
             files = sorted(base.iterdir(), key=lambda s: s.name.lower())
             for num, path in enumerate(files, start=1):
                 prefix = "└── " if num == len(files) else "├── "
-                if path.name.startswith('.') or {"venv", "__pycache__"} & {p.name for p in path.parents}:
+                if path.name.startswith(".") or {"venv", "__pycache__"} & {
+                    p.name for p in path.parents
+                }:
                     continue
                 lines.append(prefix + path.name)
                 if path.is_dir():
                     indent = "   " if num == len(files) else "|   "
                     lines.append(textwrap.indent(tree(path), prefix=indent))
             return "\n".join(lines)
+
         message = CogsUtils.replace_var_paths(tree(path))
         await Menu(pages=message, lang="ini").start(ctx)
 

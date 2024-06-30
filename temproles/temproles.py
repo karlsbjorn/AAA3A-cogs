@@ -38,29 +38,21 @@ class OptionalTimeConverter(commands.Converter):
 class TempRoles(Cog):
     """A cog to assign temporary roles to users, expiring after a set time!"""
 
+    __authors__: typing.List[str] = ["Obi-Wan3", "AAA3A"]
+
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["Obi-Wan3", "AAA3A"]
 
         self.config: Config = Config.get_conf(
             self,
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.temproles_member: typing.Dict[str, typing.Dict[int, int]] = {
-            "temp_roles": {},
-        }
-        self.temproles_guild: typing.Dict[
-            str,
-            typing.Union[
-                typing.Optional[int], typing.Dict[int, typing.Dict[str, typing.Optional[int]]]
-            ],
-        ] = {
-            "logs_channel": None,
-            "allowed_self_temp_roles": {},
-        }
-        self.config.register_member(**self.temproles_member)
-        self.config.register_guild(**self.temproles_guild)
+        self.config.register_member(temp_roles={})
+        self.config.register_guild(
+            logs_channel=None,
+            allowed_self_temp_roles={},
+        )
 
     async def cog_load(self) -> None:
         await super().cog_load()
@@ -80,9 +72,9 @@ class TempRoles(Cog):
         user_id: int,
     ) -> None:
         """Delete temporary roles only in cog data for the user."""
-        if requester not in ["discord_deleted_user", "owner", "user", "user_strict"]:
+        if requester not in ("discord_deleted_user", "owner", "user", "user_strict"):
             return
-        if requester not in ["discord_deleted_user", "owner"]:
+        if requester not in ("discord_deleted_user", "owner"):
             return
         member_group = self.config._get_base_group(self.config.MEMBER)
         async with member_group.all() as members_data:
@@ -145,7 +137,7 @@ class TempRoles(Cog):
                                         temp_role, reason="Temp Role automatically unassigned."
                                     )
                                 except discord.HTTPException as e:
-                                    self.log.error(
+                                    self.logger.error(
                                         f"Error when removing the Temp Role {temp_role.name} ({temp_role.id}) from {member} ({member.id}) in {guild.name} ({guild.id}).",
                                         exc_info=e,
                                     )
@@ -219,7 +211,7 @@ class TempRoles(Cog):
             raise commands.UserFeedbackCheckFailure(
                 _("This role cannot be assigned due to the Discord role hierarchy.")
             )
-        if ctx.author != ctx.guild.owner and (
+        if ctx.command.name != "selfassign"  and ctx.author != ctx.guild.owner and (
             member.top_role >= ctx.author.top_role or member == ctx.guild.owner
         ):
             raise commands.UserFeedbackCheckFailure(

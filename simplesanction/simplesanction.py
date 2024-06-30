@@ -11,6 +11,7 @@ from redbot.core.commands.converter import parse_timedelta, timedelta
 from redbot.core.utils.predicates import MessagePredicate
 
 from .constants import ACTIONS_DICT
+from .dashboard_integration import DashboardIntegration
 from .types import Action
 from .view import SimpleSanctionView
 
@@ -51,7 +52,7 @@ async def sanction_member_context_menu(interaction: discord.Interaction, member:
 
 
 @cog_i18n(_)
-class SimpleSanction(Cog):
+class SimpleSanction(DashboardIntegration, Cog):
     """A cog to sanction members, with buttons!"""
 
     def __init__(self, bot: Red) -> None:
@@ -62,15 +63,14 @@ class SimpleSanction(Cog):
             identifier=205192943327321000143939875896557571750,  # 793615829052
             force_registration=True,
         )
-        self.sanction_guild: typing.Dict[str, typing.Union[str, bool, int]] = {
-            "use_warn_system": True,
-            "reason_required": True,
-            "show_author": True,
-            "action_confirmation": True,
-            "finish_message": True,
-            "thumbnail": "https://i.imgur.com/Bl62rGd.png",
-        }
-        self.config.register_guild(**self.sanction_guild)
+        self.config.register_guild(
+            use_warn_system=True,
+            reason_required=True,
+            show_author=True,
+            action_confirmation=True,
+            finish_message=True,
+            thumbnail="https://i.imgur.com/Bl62rGd.png",
+        )
 
         self.actions: typing.Dict[str, Action] = {
             key: Action(cog=self, key=key, **value) for key, value in ACTIONS_DICT.items()
@@ -125,14 +125,6 @@ class SimpleSanction(Cog):
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(sanction_member_context_menu.name)
         await super().cog_unload()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     @commands.guild_only()
     @commands.admin_or_permissions(administrator=True)

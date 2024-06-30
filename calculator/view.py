@@ -204,7 +204,7 @@ class CalculatorView(discord.ui.View):
             pass
 
     async def _callback(self, interaction: discord.Interaction) -> None:
-        if self._result in [_("Error!"), "∞", ""]:
+        if self._result in (_("Error!"), "∞", ""):
             self._result = None
         if self._result is not None and interaction.data["custom_id"] != "result_button":
             self._expression = f"{self._result}|"
@@ -280,7 +280,9 @@ class CalculatorView(discord.ui.View):
                 embed.description = _("Nothing in your history.")
             else:
                 for count, entry in enumerate(history, start=0):
-                    all_count = list(range(1, len(self.cog.history.get(self.ctx.author, [])) + 1))[::-1]
+                    all_count = list(range(1, len(self.cog.history.get(self.ctx.author, [])) + 1))[
+                        ::-1
+                    ]
                     count = all_count[count]
                     _expression, _result = entry
                     embed.add_field(

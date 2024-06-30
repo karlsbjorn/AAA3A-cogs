@@ -1,7 +1,7 @@
 ﻿from AAA3A_utils import Cog, CogsUtils, Menu, Loop  # isort:skip
 from redbot.core import commands, Config  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -54,6 +54,14 @@ IGNORED_ERRORS = (
 )
 
 
+class IdConverter(commands.Converter):
+    async def convert(self, ctx: commands.Context, argument: str) -> int:
+        try:
+            return int(argument.lstrip("#"))
+        except ValueError:
+            raise commands.BadArgument()
+
+
 @dataclass(frozen=False)
 class ConsoleLog:
     id: int
@@ -90,29 +98,29 @@ class ConsoleLog:
 
 
 @cog_i18n(_)
-class ConsoleLogs(Cog, DashboardIntegration):
+class ConsoleLogs(DashboardIntegration, Cog):
     """A cog to display the console logs, with buttons and filter options, and to send commands errors in configured channels!"""
+
+    __authors__: typing.List[str] = ["AAA3A", "Tobotimus"]
 
     def __init__(self, bot: Red) -> None:
         super().__init__(bot=bot)
-        self.__authors__: typing.List[str] = ["AAA3A", "Tobotimus"]
 
         self.config: Config = Config.get_conf(
             self,
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.consolelogs_channel: typing.Dict[str, typing.Union[bool, typing.List[str]]] = {
-            "enabled": False,
-            "global_errors": True,
-            "prefixed_commands_errors": True,
-            "slash_commands_errors": True,
-            "dpy_ignored_exceptions": False,
-            "full_console": False,
-            "guild_invite": True,
-            "ignored_cogs": [],
-        }
-        self.config.register_channel(**self.consolelogs_channel)
+        self.config.register_channel(
+            enabled=False,
+            global_errors=True,
+            prefixed_commands_errors=True,
+            slash_commands_errors=True,
+            dpy_ignored_exceptions=False,
+            full_console=False,
+            guild_invite=True,
+            ignored_cogs=[],
+        )
 
         self.RED_INTRO: str = None
         self._last_console_log_sent_timestamp: int = None
@@ -229,14 +237,6 @@ class ConsoleLogs(Cog, DashboardIntegration):
 
         return console_logs
 
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
-
     async def send_console_logs(
         self,
         ctx: commands.Context,
@@ -317,12 +317,12 @@ class ConsoleLogs(Cog, DashboardIntegration):
             for i, console_log_to_display_str in enumerate(console_logs_to_display_str):
                 if i == view:
                     page_index = len(pages)
-                pages.extend(list(pagify(console_log_to_display_str, shorten_by=10 + len(prefix))))
+                pages.extend(list(pagify(console_log_to_display_str, shorten_by=12 + len(prefix))))
         else:
             pages = list(
                 pagify(
                     ("\n" * lines_break).join(console_logs_to_display_str),
-                    shorten_by=10 + len(prefix),
+                    shorten_by=12 + len(prefix),
                 )
             )
             page_index = [
@@ -367,7 +367,7 @@ class ConsoleLogs(Cog, DashboardIntegration):
                 "nodes",
             ]
         ] = None,
-        ids: commands.Greedy[int] = None,
+        ids: commands.Greedy[IdConverter] = None,
         logger_name: typing.Optional[str] = None,
     ) -> None:
         """View a console log, for a provided level/logger name."""
@@ -409,7 +409,7 @@ class ConsoleLogs(Cog, DashboardIntegration):
                 "nodes",
             ]
         ] = None,
-        ids: commands.Greedy[int] = None,
+        ids: commands.Greedy[IdConverter] = None,
         logger_name: typing.Optional[str] = None,
     ) -> None:
         """Scroll the console logs, for all levels/loggers or provided level/logger name."""
@@ -445,7 +445,7 @@ class ConsoleLogs(Cog, DashboardIntegration):
                 "nodes",
             ]
         ] = None,
-        ids: commands.Greedy[int] = None,
+        ids: commands.Greedy[IdConverter] = None,
         logger_name: typing.Optional[str] = None,
     ) -> None:
         """View the console logs one by one, for all levels/loggers or provided level/logger name."""
@@ -532,7 +532,11 @@ class ConsoleLogs(Cog, DashboardIntegration):
         await ctx.send(_("Errors logging enabled in {channel.mention}.").format(channel=channel))
 
     @consolelogs.command(aliases=["-"])
-    async def removechannel(self, ctx: commands.Context, channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread]) -> None:
+    async def removechannel(
+        self,
+        ctx: commands.Context,
+        channel: typing.Union[discord.TextChannel, discord.VoiceChannel, discord.Thread],
+    ) -> None:
         """Disable errors logging in a channel."""
         if not await self.config.channel(channel).enabled():
             raise commands.UserFeedbackCheckFailure(
@@ -705,7 +709,7 @@ class ConsoleLogs(Cog, DashboardIntegration):
             self._last_console_log_sent_timestamp = console_log.time_timestamp
             pages_to_send.append(console_log.__str__(with_ansi=False, with_extra_break_line=False))
             if (
-                console_log.level in ["CRITICAL", "ERROR"]
+                console_log.level in ("CRITICAL", "ERROR")
                 and console_log.logger_name.split(".")[0] == "discord"
                 and console_log.message.split("\n")[0].startswith("Ignoring exception ")
             ):

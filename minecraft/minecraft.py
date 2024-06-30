@@ -1,7 +1,7 @@
 from AAA3A_utils import Cog, Loop, Menu  # isort:skip
 from redbot.core import commands, Config  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 import typing_extensions  # isort:skip
@@ -76,12 +76,11 @@ class Minecraft(Cog):
             identifier=205192943327321000143939875896557571750,
             force_registration=True,
         )
-        self.minecraft_channel: typing.Dict[str, typing.List[str]] = {
-            "servers": {},
-            "check_players": False,
-            "edit_last_message": False,
-        }
-        self.config.register_channel(**self.minecraft_channel)
+        self.config.register_channel(
+            servers={},
+            check_players=False,
+            edit_last_message=False,
+        )
 
     async def cog_load(self) -> None:
         await super().cog_load()
@@ -98,14 +97,6 @@ class Minecraft(Cog):
     async def cog_unload(self) -> None:
         await self._session.close()
         await super().cog_unload()
-
-    async def red_delete_data_for_user(self, *args, **kwargs) -> None:
-        """Nothing to delete."""
-        return
-
-    async def red_get_data_for_user(self, *args, **kwargs) -> typing.Dict[str, typing.Any]:
-        """Nothing to get."""
-        return {}
 
     async def check_servers(self) -> None:
         all_channels = await self.config.all_channels()
@@ -124,7 +115,7 @@ class Minecraft(Cog):
                 except (asyncio.CancelledError, TimeoutError):
                     continue
                 except Exception as e:
-                    self.log.error(
+                    self.logger.error(
                         f"No data found for {server_url} server in {channel.id} channel in {channel.guild.id} guild.",
                         exc_info=e,
                     )

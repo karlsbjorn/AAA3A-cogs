@@ -24,7 +24,9 @@ class MyMessageConverter(commands.MessageConverter):
         message = await super().convert(ctx, argument=argument)
         if message.author != ctx.me:
             raise commands.UserFeedbackCheckFailure(
-                _("I have to be the author of the message. You can use EmbedUtils by AAA3A to send one.")
+                _(
+                    "I have to be the author of the message. You can use EmbedUtils by AAA3A to send one."
+                )
             )
         return message
 
@@ -47,7 +49,7 @@ class settings(Cog):
         message: typing.Optional[MyMessageConverter],
         reason_options: commands.Greedy[EmojiLabelDescriptionValueConverter],
         emoji: typing.Optional[Emoji] = "🎟️",
-        label: str = None,
+        label: commands.Range[str, 1, 80] = None,
     ) -> None:
         """Send a message with a button to open a ticket or dropdown with possible reasons.
 

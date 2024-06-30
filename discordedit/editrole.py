@@ -1,7 +1,7 @@
 from AAA3A_utils import Cog, CogsUtils, Menu  # isort:skip
 from redbot.core import commands  # isort:skip
-from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 from redbot.core.bot import Red  # isort:skip
+from redbot.core.i18n import Translator, cog_i18n  # isort:skip
 import discord  # isort:skip
 import typing  # isort:skip
 
@@ -11,9 +11,9 @@ import aiohttp
 from redbot.core.utils.chat_formatting import box, pagify
 
 try:
-    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
-except ImportError:
     from emoji import EMOJI_DATA  # emoji>=2.0.0
+except ImportError:
+    from emoji import UNICODE_EMOJI_ENGLISH as EMOJI_DATA  # emoji<2.0.0
 
 from .view import DiscordEditView
 

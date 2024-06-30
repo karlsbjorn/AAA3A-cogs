@@ -185,6 +185,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
                 "__spec__": None,
             }
         )
+        env["interaction"] = ctx.interaction
         if getattr(ctx.channel, "category", None) is not None:
             env["category"] = ctx.channel.category
         Dev = ctx.bot.get_cog("Dev")
@@ -352,8 +353,7 @@ class DevEnv(typing.Dict[str, typing.Any]):
 
         def reference(ctx: commands.Context) -> typing.Optional[discord.Message]:
             if (
-                hasattr(ctx.message, "reference")
-                and ctx.message.reference is not None
+                ctx.message.reference is not None
                 and isinstance(ctx.message.reference.resolved, discord.Message)
             ):
                 return ctx.message.reference.resolved

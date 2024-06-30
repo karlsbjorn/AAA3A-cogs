@@ -33,8 +33,8 @@ class MemberPrefix(Cog):
         self.memberprefix_member: typing.Dict[str, typing.List[str]] = {
             "custom_prefixes": [],
         }
-        self.config.register_global(**self.memberprefix_global)
-        self.config.register_member(**self.memberprefix_member)
+        self.config.register_global(use_normal_prefixes=True)
+        self.config.register_member(custom_prefixes=[])
 
         self.original_prefix_manager = self.bot.command_prefix
 
@@ -75,7 +75,7 @@ class MemberPrefix(Cog):
         user_id: int,
     ) -> None:
         """Delete all user chosen prefixes in all Config guilds."""
-        if requester not in ["discord_deleted_user", "owner", "user", "user_strict"]:
+        if requester not in ("discord_deleted_user", "owner", "user", "user_strict"):
             return
         member_group = self.config._get_base_group(self.config.MEMBER)
         async with member_group.all() as members_data:
